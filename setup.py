@@ -38,6 +38,7 @@ CLASSIFIERS = [
     'License :: OSI Approved :: BSD License',
     'Operating System :: MacOS :: MacOS X',
     'Operating System :: POSIX',
+    'Operating System :: Microsoft :: Windows',
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
@@ -186,6 +187,14 @@ def main():
                                  'INSTALL'],
                       'pyftdi.serialext': ['*.rst', 'doc/api/uart.rst']},
         classifiers=CLASSIFIERS,
+        entry_points = {
+            'console_scripts': [
+                'ftconf=pyftdi.bin.ftconf:main',
+                'ftdi_urls=pyftdi.bin.ftdi_urls:main',
+                'i2cscan=pyftdi.bin.i2cscan:main',
+                'pyterm=pyftdi.bin.pyterm:main'
+            ],
+        },
         install_requires=INSTALL_REQUIRES,
         test_requires=TEST_REQUIRES,
         python_requires='>=3.7',

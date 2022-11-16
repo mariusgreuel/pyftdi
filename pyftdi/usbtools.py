@@ -65,7 +65,7 @@ class UsbTools:
     """Helpers to obtain information about connected USB devices."""
 
     # Supported back ends, in preference order
-    BACKENDS = ('usb.backend.libusb1', 'usb.backend.libusb0')
+    BACKENDS = ('pyftdi.d2xx', 'usb.backend.libusb1', 'usb.backend.libusb0')
 
     # Need to maintain a list of reference USB devices, to circumvent a
     # limitation in pyusb that prevents from opening several times the same
