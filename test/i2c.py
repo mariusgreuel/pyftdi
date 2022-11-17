@@ -14,13 +14,18 @@ i2c = I2cController()
 i2c.configure('ftdi://ftdi:232h/1')
 
 # Get a port to an I2C slave device
-slave = i2c.get_port(0x21)
+slave = i2c.get_port(0x77)
 
-# Send one byte, then receive one byte
-slave.exchange([0x04], 1)
+BME68X_REG_CHIP_ID = 0xD0
+BME68X_REG_SOFT_RESET = 0xE0
+BME68X_CHIP_ID = 0x61
 
-# Write a register to the I2C slave
-slave.write_to(0x06, b'\x00')
+# BME68x soft reset
+slave.write_to(BME68X_REG_SOFT_RESET, b'\xB6')
 
 # Read a register from the I2C slave
-slave.read_from(0x00, 1)
+status = slave.read_from(BME68X_REG_CHIP_ID, 1)
+print(f"Status: 0x{status[0]:02X}")
+
+if status[0] == BME68X_CHIP_ID:
+    print(f"Found BME68x device")
