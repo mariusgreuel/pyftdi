@@ -42,4 +42,4 @@ leds = (led_c0, led_c1, led_c2, led_c3, led_c4, led_c5, led_c6, led_c7)
 while True:
     for i in range(8):
         leds[i].value ^= 1
-        time.sleep(0.25)
+        time.sleep(1/8)

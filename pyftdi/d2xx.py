@@ -335,7 +335,11 @@ class _D2xx(usb.backend.IBackend):
             serial_number = lpSerialNumber.value.decode("ascii")
             description = lpDescription.value.decode("ascii")
             _logger.info(
-                "Found device: ID=%04X:%04X, serial_number='%s', description='%s'", dev_id & 0xFFFF, (dev_id >> 16) & 0xFFFF, serial_number, description
+                "Found device: ID=%04X:%04X, serial_number='%s', description='%s'",
+                dev_id & 0xFFFF,
+                (dev_id >> 16) & 0xFFFF,
+                serial_number,
+                description,
             )
             yield _Device(
                 flags, type, dev_id, loc_id, handle, serial_number, description
