@@ -11,6 +11,7 @@ from ctypes import (
     CFUNCTYPE,
     POINTER,
     c_ubyte,
+    c_ushort,
     c_uint,
     c_ulong,
     c_void_p,
@@ -38,7 +39,14 @@ FT_GetDeviceInfoDetail = None
 FT_OpenEx = None
 FT_Close = None
 FT_ResetDevice = None
+FT_SetDtr = None
+FT_ClrDtr = None
+FT_SetRts = None
+FT_ClrRts = None
 FT_Purge = None
+FT_SetFlowControl = None
+FT_SetBaudRate = None
+FT_GetModemStatus = None
 FT_SetChars = None
 FT_SetLatencyTimer = None
 FT_GetLatencyTimer = None
@@ -50,6 +58,9 @@ FT_GetStatus = None
 FT_GetQueueStatus = None
 FT_Read = None
 FT_Write = None
+FT_ReadEE = None
+FT_WriteEE = None
+FT_EraseEE = None
 
 _IN = 1
 _OUT = 2
@@ -64,6 +75,8 @@ FT_PURGE_RX = 1
 FT_PURGE_TX = 2
 
 UCHAR = c_ubyte
+USHORT = c_ushort
+WORD = c_ushort
 DWORD = c_uint
 FT_STATUS = c_ulong
 FT_HANDLE = c_void_p
@@ -93,7 +106,14 @@ def _load_imports():
     global FT_OpenEx
     global FT_Close
     global FT_ResetDevice
+    global FT_SetDtr
+    global FT_ClrDtr
+    global FT_SetRts
+    global FT_ClrRts
     global FT_Purge
+    global FT_SetFlowControl
+    global FT_SetBaudRate
+    global FT_GetModemStatus
     global FT_SetChars
     global FT_SetLatencyTimer
     global FT_GetLatencyTimer
@@ -105,6 +125,9 @@ def _load_imports():
     global FT_GetQueueStatus
     global FT_Read
     global FT_Write
+    global FT_ReadEE
+    global FT_WriteEE
+    global FT_EraseEE
 
     CreateEventW = cdll.kernel32.CreateEventW
     WaitForSingleObject = cdll.kernel32.WaitForSingleObject
@@ -131,10 +154,31 @@ def _load_imports():
     )
     FT_Close = _ft_function("FT_Close", (_IN, FT_HANDLE, "ftHandle"))
     FT_ResetDevice = _ft_function("FT_ResetDevice", (_IN, FT_HANDLE, "ftHandle"))
+    FT_SetDtr = _ft_function("FT_SetDtr", (_IN, FT_HANDLE, "ftHandle"))
+    FT_ClrDtr = _ft_function("FT_ClrDtr", (_IN, FT_HANDLE, "ftHandle"))
+    FT_SetRts = _ft_function("FT_SetRts", (_IN, FT_HANDLE, "ftHandle"))
+    FT_ClrRts = _ft_function("FT_ClrRts", (_IN, FT_HANDLE, "ftHandle"))
     FT_Purge = _ft_function(
         "FT_Purge",
         (_IN, FT_HANDLE, "ftHandle"),
         (_IN, DWORD, "dwMask"),
+    )
+    FT_SetFlowControl = _ft_function(
+        "FT_SetFlowControl",
+        (_IN, FT_HANDLE, "ftHandle"),
+        (_IN, USHORT, "usFlowControl"),
+        (_IN, UCHAR, "uXon"),
+        (_IN, UCHAR, "uXoff"),
+    )
+    FT_SetBaudRate = _ft_function(
+        "FT_SetBaudRate",
+        (_IN, FT_HANDLE, "ftHandle"),
+        (_IN, DWORD, "dwBaudRate"),
+    )
+    FT_GetModemStatus = _ft_function(
+        "FT_GetModemStatus",
+        (_IN, FT_HANDLE, "ftHandle"),
+        (_OUT, POINTER(DWORD), "lpdwModemStatus"),
     )
     FT_SetChars = _ft_function(
         "FT_SetChars",
@@ -203,6 +247,22 @@ def _load_imports():
         (_IN, POINTER(c_ubyte), "lpBuffer"),
         (_IN, DWORD, "dwBytesToWrite"),
         (_OUT, POINTER(DWORD), "lpdwBytesWritten"),
+    )
+    FT_ReadEE = _ft_function(
+        "FT_ReadEE",
+        (_IN, FT_HANDLE, "ftHandle"),
+        (_IN, DWORD, "dwWordOffset"),
+        (_OUT, POINTER(WORD), "lpwValue"),
+    )
+    FT_WriteEE = _ft_function(
+        "FT_WriteEE",
+        (_IN, FT_HANDLE, "ftHandle"),
+        (_IN, DWORD, "dwWordOffset"),
+        (_IN, WORD, "wValue"),
+    )
+    FT_EraseEE = _ft_function(
+        "FT_EraseEE",
+        (_IN, FT_HANDLE, "ftHandle"),
     )
 
 
@@ -519,15 +579,30 @@ class _D2xx(usb.backend.IBackend):
                 FT_Purge(dev_handle.handle, FT_PURGE_TX)
                 return 0
         elif bRequest == Ftdi.SIO_REQ_SET_MODEM_CTRL:
-            pass
+            if wValue & 0x0100:
+                if wValue & 0x01:
+                    FT_SetDtr(dev_handle.handle)
+                else:
+                    FT_ClrDtr(dev_handle.handle)
+            if wValue & 0x0200:
+                if wValue & 0x02:
+                    FT_SetRts(dev_handle.handle)
+                else:
+                    FT_ClrRts(dev_handle.handle)
+            return 0
         elif bRequest == Ftdi.SIO_REQ_SET_FLOW_CTRL:
-            pass
+            FT_SetFlowControl(dev_handle.handle, wIndex & 0xFF00, 0x11, 0x13)
+            return 0
         elif bRequest == Ftdi.SIO_REQ_SET_BAUDRATE:
-            pass
+            FT_SetBaudRate(dev_handle.handle, 0)
+            return 0
         elif bRequest == Ftdi.SIO_REQ_SET_DATA:
             pass
         elif bRequest == Ftdi.SIO_REQ_POLL_MODEM_STATUS:
-            pass
+            status = FT_GetModemStatus(dev_handle.handle)
+            data[0] = status & 0xFF
+            data[1] = (status >> 8) & 0xFF
+            return 0
         elif bRequest == Ftdi.SIO_REQ_SET_EVENT_CHAR:
             dev_handle.event_char = wValue & 0xFF
             dev_handle.event_char_enabled = (wValue >> 8) & 0xFF
@@ -562,6 +637,12 @@ class _D2xx(usb.backend.IBackend):
             return 0
         elif bRequest == Ftdi.SIO_REQ_READ_PINS:
             return 0
+        elif bRequest == Ftdi.SIO_REQ_READ_EEPROM:
+            return FT_ReadEE(dev_handle.handle)
+        elif bRequest == Ftdi.SIO_REQ_WRITE_EEPROM:
+            return FT_WriteEE(dev_handle.handle)
+        elif bRequest == Ftdi.SIO_REQ_ERASE_EEPROM:
+            return FT_EraseEE(dev_handle.handle)
 
         raise USBError("Not implemented")
 
