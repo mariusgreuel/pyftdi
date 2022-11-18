@@ -83,10 +83,34 @@ FT_PURGE_TX = 2
 
 UCHAR = c_ubyte
 USHORT = c_ushort
+ULONG = c_ulong
 WORD = c_ushort
 DWORD = c_uint
 FT_STATUS = c_ulong
 FT_HANDLE = c_void_p
+
+
+class ERROR(IntEnum):
+    FT_OK = 0
+    FT_INVALID_HANDLE = 1
+    FT_DEVICE_NOT_FOUND = 2
+    FT_DEVICE_NOT_OPENED = 3
+    FT_IO_ERROR = 4
+    FT_INSUFFICIENT_RESOURCES = 5
+    FT_INVALID_PARAMETER = 6
+    FT_INVALID_BAUD_RATE = 7
+    FT_DEVICE_NOT_OPENED_FOR_ERASE = 8
+    FT_DEVICE_NOT_OPENED_FOR_WRITE = 9
+    FT_FAILED_TO_WRITE_DEVICE = 10
+    FT_EEPROM_READ_FAILED = 11
+    FT_EEPROM_WRITE_FAILED = 12
+    FT_EEPROM_ERASE_FAILED = 13
+    FT_EEPROM_NOT_PRESENT = 14
+    FT_EEPROM_NOT_PROGRAMMED = 15
+    FT_INVALID_ARGS = 16
+    FT_NOT_SUPPORTED = 17
+    FT_OTHER_ERROR = 18
+    FT_DEVICE_LIST_NOT_READY = 19
 
 
 ERRORS = {
@@ -111,29 +135,6 @@ ERRORS = {
     ERROR.FT_OTHER_ERROR: "Other error",
     ERROR.FT_DEVICE_LIST_NOT_READY: "Device list not ready",
 }
-
-
-class ERROR(IntEnum):
-    FT_OK = 0
-    FT_INVALID_HANDLE = 1
-    FT_DEVICE_NOT_FOUND = 2
-    FT_DEVICE_NOT_OPENED = 3
-    FT_IO_ERROR = 4
-    FT_INSUFFICIENT_RESOURCES = 5
-    FT_INVALID_PARAMETER = 6
-    FT_INVALID_BAUD_RATE = 7
-    FT_DEVICE_NOT_OPENED_FOR_ERASE = 8
-    FT_DEVICE_NOT_OPENED_FOR_WRITE = 9
-    FT_FAILED_TO_WRITE_DEVICE = 10
-    FT_EEPROM_READ_FAILED = 11
-    FT_EEPROM_WRITE_FAILED = 12
-    FT_EEPROM_ERASE_FAILED = 13
-    FT_EEPROM_NOT_PRESENT = 14
-    FT_EEPROM_NOT_PROGRAMMED = 15
-    FT_INVALID_ARGS = 16
-    FT_NOT_SUPPORTED = 17
-    FT_OTHER_ERROR = 18
-    FT_DEVICE_LIST_NOT_READY = 19
 
 
 def _ft_function(name, *args):
@@ -243,8 +244,8 @@ def _load_imports():
         (_OUT, POINTER(DWORD), "lpdwType"),
         (_OUT, POINTER(DWORD), "lpdwID"),
         (_OUT, POINTER(DWORD), "lpdwLocId"),
-        (_IN, c_char_p, "pszSerialNumber"),
-        (_IN, c_char_p, "pszDescription"),
+        (_IN, c_char_p, "lpSerialNumber"),
+        (_IN, c_char_p, "lpDescription"),
         (_OUT, POINTER(FT_HANDLE), "pftHandle"),
     )
     FT_OpenEx = _ft_function(
@@ -288,26 +289,26 @@ def _load_imports():
     FT_Purge = _ft_function(
         "FT_Purge",
         (_IN, FT_HANDLE, "ftHandle"),
-        (_IN, DWORD, "dwMask"),
+        (_IN, ULONG, "Mask"),
     )
     FT_SetFlowControl = _ft_function(
         "FT_SetFlowControl",
         (_IN, FT_HANDLE, "ftHandle"),
-        (_IN, USHORT, "usFlowControl"),
-        (_IN, UCHAR, "uXon"),
-        (_IN, UCHAR, "uXoff"),
+        (_IN, USHORT, "FlowControl"),
+        (_IN, UCHAR, "XonChar"),
+        (_IN, UCHAR, "XoffChar"),
     )
     FT_SetBaudRate = _ft_function(
         "FT_SetBaudRate",
         (_IN, FT_HANDLE, "ftHandle"),
-        (_IN, DWORD, "dwBaudRate"),
+        (_IN, ULONG, "BaudRate"),
     )
     FT_SetDataCharacteristics = _ft_function(
         "FT_SetDataCharacteristics",
         (_IN, FT_HANDLE, "ftHandle"),
-        (_IN, UCHAR, "uWordLength"),
-        (_IN, UCHAR, "uStopBits"),
-        (_IN, UCHAR, "uParity"),
+        (_IN, UCHAR, "WordLength"),
+        (_IN, UCHAR, "StopBits"),
+        (_IN, UCHAR, "Parity"),
     )
     FT_SetBreakOn = _ft_function(
         "FT_SetBreakOn",
@@ -320,25 +321,25 @@ def _load_imports():
     FT_GetModemStatus = _ft_function(
         "FT_GetModemStatus",
         (_IN, FT_HANDLE, "ftHandle"),
-        (_OUT, POINTER(DWORD), "lpdwModemStatus"),
+        (_OUT, POINTER(ULONG), "pModemStatus"),
     )
     FT_SetChars = _ft_function(
         "FT_SetChars",
         (_IN, FT_HANDLE, "ftHandle"),
-        (_IN, UCHAR, "uEventChar"),
-        (_IN, UCHAR, "uEventCharEnabled"),
-        (_IN, UCHAR, "uErrorChar"),
-        (_IN, UCHAR, "uErrorCharEnabled"),
+        (_IN, UCHAR, "EventChar"),
+        (_IN, UCHAR, "EventCharEnabled"),
+        (_IN, UCHAR, "ErrorChar"),
+        (_IN, UCHAR, "ErrorCharEnabled"),
     )
     FT_SetLatencyTimer = _ft_function(
         "FT_SetLatencyTimer",
         (_IN, FT_HANDLE, "ftHandle"),
-        (_IN, UCHAR, "ucTimer"),
+        (_IN, UCHAR, "ucLatency"),
     )
     FT_GetLatencyTimer = _ft_function(
         "FT_GetLatencyTimer",
         (_IN, FT_HANDLE, "ftHandle"),
-        (_OUT, POINTER(UCHAR), "pucTimer"),
+        (_OUT, POINTER(UCHAR), "pucLatency"),
     )
     FT_SetBitMode = _ft_function(
         "FT_SetBitMode",
@@ -349,24 +350,25 @@ def _load_imports():
     FT_GetBitMode = _ft_function(
         "FT_GetBitMode",
         (_IN, FT_HANDLE, "ftHandle"),
+        (_OUT, POINTER(UCHAR), "pucMode"),
     )
     FT_SetTimeouts = _ft_function(
         "FT_SetTimeouts",
         (_IN, FT_HANDLE, "ftHandle"),
-        (_IN, DWORD, "dwReadTimeout"),
-        (_IN, DWORD, "dwWriteTimeout"),
+        (_IN, ULONG, "ReadTimeout"),
+        (_IN, ULONG, "WriteTimeout"),
     )
     FT_SetUSBParameters = _ft_function(
         "FT_SetUSBParameters",
         (_IN, FT_HANDLE, "ftHandle"),
-        (_IN, DWORD, "dwInTransferSize"),
-        (_IN, DWORD, "dwOutTransferSize"),
+        (_IN, ULONG, "ulInTransferSize"),
+        (_IN, ULONG, "ulOutTransferSize"),
     )
     FT_SetEventNotification = _ft_function(
         "FT_SetEventNotification",
         (_IN, FT_HANDLE, "ftHandle"),
-        (_IN, DWORD, "dwEventMask"),
-        (_IN, c_void_p, "pvArg"),
+        (_IN, DWORD, "Mask"),
+        (_IN, c_void_p, "Param"),
     )
     FT_GetStatus = _ft_function(
         "FT_GetStatus",

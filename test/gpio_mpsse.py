@@ -6,7 +6,7 @@ logger = logging.getLogger("pyftdi.d2xx")
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-#logger.addHandler(handler)
+logger.addHandler(handler)
 
 gpio = GpioMpsseController()
 gpio.configure('ftdi:///1', direction=0xFFFF, frequency=10)
