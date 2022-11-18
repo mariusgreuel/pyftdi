@@ -7,6 +7,7 @@
 """USB Helpers"""
 
 import sys
+from fnmatch import fnmatchcase
 from importlib import import_module
 from string import printable as printablechars
 from threading import RLock
@@ -416,14 +417,14 @@ class UsbTools:
                 vps.add((vid, products[pid]))
         devices = cls.find_all(vps)
         if sernum:
-            if sernum not in [dev.sn for dev, _ in devices]:
-                raise UsbToolsError("No USB device with S/N %s" % sernum)
+            if not [dev for dev, _ in devices if fnmatchcase(dev.sn, sernum)]:
+                raise UsbToolsError("No USB device with S/N '%s'" % sernum)
         for desc, ifcount in devices:
             if vendor and vendor != desc.vid:
                 continue
             if product and product != desc.pid:
                 continue
-            if sernum and sernum != desc.sn:
+            if sernum and not fnmatchcase(desc.sn, sernum):
                 continue
             if bus is not None:
                 if bus != desc.bus or address != desc.address:
