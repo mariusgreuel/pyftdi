@@ -9,7 +9,7 @@ handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s -
 logger.addHandler(handler)
 
 gpio = GpioMpsseController()
-gpio.configure('ftdi:///1', direction=0xFFFF, frequency=10)
+gpio.configure("ftdi://::FT*/1", direction=0xFFFF, frequency=10)
 
 index = 0
 inc = 1

@@ -9,7 +9,7 @@ handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s -
 logger.addHandler(handler)
 
 gpio = GpioAsyncController()
-gpio.configure('ftdi:///1', direction=0xFF)
+gpio.configure("ftdi://::FT*/1", direction=0xFF)
 
 index = 0
 inc = 1

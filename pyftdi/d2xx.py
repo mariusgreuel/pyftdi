@@ -627,9 +627,9 @@ class _D2xx(usb.backend.IBackend):
         if len(data) < 2:
             return 0
 
-        # status = WaitForSingleObject(dev_handle.rx_event, 10)
-        # if status != 0:
-        #    return 0
+        status = WaitForSingleObject(dev_handle.rx_event, 10)
+        if status != 0:
+            return 0
 
         rx_bytes = FT_GetQueueStatus(dev_handle.handle)
         if rx_bytes == 0:
