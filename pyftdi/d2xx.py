@@ -4,6 +4,7 @@
 
 """libusb emulation backend for FTDI D2XX driver."""
 
+from enum import IntEnum
 from sys import platform
 from logging import getLogger
 from ctypes import (
@@ -34,11 +35,15 @@ _logger = getLogger("pyftdi.d2xx")
 _lib = None
 CreateEventW = None
 WaitForSingleObject = None
+FT_GetLibraryVersion = None
+FT_GetDriverVersion = None
 FT_CreateDeviceInfoList = None
 FT_GetDeviceInfoDetail = None
 FT_OpenEx = None
 FT_Close = None
 FT_ResetDevice = None
+FT_ResetPort = None
+FT_CyclePort = None
 FT_SetDtr = None
 FT_ClrDtr = None
 FT_SetRts = None
@@ -46,11 +51,15 @@ FT_ClrRts = None
 FT_Purge = None
 FT_SetFlowControl = None
 FT_SetBaudRate = None
+FT_SetDataCharacteristics = None
+FT_SetBreakOn = None
+FT_SetBreakOff = None
 FT_GetModemStatus = None
 FT_SetChars = None
 FT_SetLatencyTimer = None
 FT_GetLatencyTimer = None
 FT_SetBitMode = None
+FT_GetBitMode = None
 FT_SetTimeouts = None
 FT_SetUSBParameters = None
 FT_SetEventNotification = None
@@ -65,8 +74,6 @@ FT_EraseEE = None
 _IN = 1
 _OUT = 2
 
-FT_OK = 0
-
 FT_OPEN_BY_SERIAL_NUMBER = 1
 
 FT_EVENT_RXCHAR = 1
@@ -80,6 +87,75 @@ WORD = c_ushort
 DWORD = c_uint
 FT_STATUS = c_ulong
 FT_HANDLE = c_void_p
+
+
+ERRORS = {
+    ERROR.FT_OK: "OK",
+    ERROR.FT_INVALID_HANDLE: "Invalid_handle",
+    ERROR.FT_DEVICE_NOT_FOUND: "Device not found",
+    ERROR.FT_DEVICE_NOT_OPENED: "Device not opened",
+    ERROR.FT_IO_ERROR: "I/O error",
+    ERROR.FT_INSUFFICIENT_RESOURCES: "Insufficient resources",
+    ERROR.FT_INVALID_PARAMETER: "Invalid parameter",
+    ERROR.FT_INVALID_BAUD_RATE: "Invalid baud rate",
+    ERROR.FT_DEVICE_NOT_OPENED_FOR_ERASE: "Device not opened for erase",
+    ERROR.FT_DEVICE_NOT_OPENED_FOR_WRITE: "Device not opened for write",
+    ERROR.FT_FAILED_TO_WRITE_DEVICE: "Failed to write device",
+    ERROR.FT_EEPROM_READ_FAILED: "EEPROM read failed",
+    ERROR.FT_EEPROM_WRITE_FAILED: "EEPROM write failed",
+    ERROR.FT_EEPROM_ERASE_FAILED: "EEPROM erase failed",
+    ERROR.FT_EEPROM_NOT_PRESENT: "EEPROM not present",
+    ERROR.FT_EEPROM_NOT_PROGRAMMED: "EEPROM not programmed",
+    ERROR.FT_INVALID_ARGS: "Unvalid arguments",
+    ERROR.FT_NOT_SUPPORTED: "Not supported",
+    ERROR.FT_OTHER_ERROR: "Other error",
+    ERROR.FT_DEVICE_LIST_NOT_READY: "Device list not ready",
+}
+
+
+class ERROR(IntEnum):
+    FT_OK = 0
+    FT_INVALID_HANDLE = 1
+    FT_DEVICE_NOT_FOUND = 2
+    FT_DEVICE_NOT_OPENED = 3
+    FT_IO_ERROR = 4
+    FT_INSUFFICIENT_RESOURCES = 5
+    FT_INVALID_PARAMETER = 6
+    FT_INVALID_BAUD_RATE = 7
+    FT_DEVICE_NOT_OPENED_FOR_ERASE = 8
+    FT_DEVICE_NOT_OPENED_FOR_WRITE = 9
+    FT_FAILED_TO_WRITE_DEVICE = 10
+    FT_EEPROM_READ_FAILED = 11
+    FT_EEPROM_WRITE_FAILED = 12
+    FT_EEPROM_ERASE_FAILED = 13
+    FT_EEPROM_NOT_PRESENT = 14
+    FT_EEPROM_NOT_PROGRAMMED = 15
+    FT_INVALID_ARGS = 16
+    FT_NOT_SUPPORTED = 17
+    FT_OTHER_ERROR = 18
+    FT_DEVICE_LIST_NOT_READY = 19
+
+
+def _ft_function(name, *args):
+    def errcheck(result, _, args):
+        if result != ERROR.FT_OK:
+            _logger.error("%s%s=%s", function.name, args, result)
+            if result in ERRORS:
+                message = ERRORS[result]
+            else:
+                message = result
+            raise RuntimeError(f"FTDI API failed: {message}.")
+
+        _logger.debug("%s%s=%s", function.name, args, result)
+        return args
+
+    argtypes = (arg[1] for arg in args)
+    paramflags = tuple((arg[0], arg[2]) for arg in args)
+    prototype = CFUNCTYPE(FT_STATUS, *argtypes)
+    function = prototype((name, _lib), paramflags)
+    function.name = name
+    function.errcheck = errcheck
+    return function
 
 
 def _load_library(_):
@@ -101,11 +177,15 @@ def _load_library(_):
 def _load_imports():
     global CreateEventW
     global WaitForSingleObject
+    global FT_GetLibraryVersion
+    global FT_GetDriverVersion
     global FT_CreateDeviceInfoList
     global FT_GetDeviceInfoDetail
     global FT_OpenEx
     global FT_Close
     global FT_ResetDevice
+    global FT_ResetPort
+    global FT_CyclePort
     global FT_SetDtr
     global FT_ClrDtr
     global FT_SetRts
@@ -113,11 +193,15 @@ def _load_imports():
     global FT_Purge
     global FT_SetFlowControl
     global FT_SetBaudRate
+    global FT_SetDataCharacteristics
+    global FT_SetBreakOn
+    global FT_SetBreakOff
     global FT_GetModemStatus
     global FT_SetChars
     global FT_SetLatencyTimer
     global FT_GetLatencyTimer
     global FT_SetBitMode
+    global FT_GetBitMode
     global FT_SetTimeouts
     global FT_SetUSBParameters
     global FT_SetEventNotification
@@ -132,6 +216,23 @@ def _load_imports():
     CreateEventW = cdll.kernel32.CreateEventW
     WaitForSingleObject = cdll.kernel32.WaitForSingleObject
 
+    FT_GetLibraryVersion = _ft_function(
+        "FT_GetLibraryVersion", (_OUT, POINTER(DWORD), "lpdwVersion")
+    )
+
+    version = FT_GetLibraryVersion()
+    _logger.info(
+        "FTDI Library V%X.%X.%X",
+        (version >> 16) & 0xFF,
+        (version >> 8) & 0xFF,
+        version & 0xFF,
+    )
+
+    FT_GetDriverVersion = _ft_function(
+        "FT_GetDriverVersion",
+        (_IN, FT_HANDLE, "ftHandle"),
+        (_OUT, POINTER(DWORD), "lpdwVersion"),
+    )
     FT_CreateDeviceInfoList = _ft_function(
         "FT_CreateDeviceInfoList", (_OUT, POINTER(DWORD), "lpdwNumDevs")
     )
@@ -152,12 +253,38 @@ def _load_imports():
         (_IN, DWORD, "dwFlags"),
         (_OUT, POINTER(FT_HANDLE), "pHandle"),
     )
-    FT_Close = _ft_function("FT_Close", (_IN, FT_HANDLE, "ftHandle"))
-    FT_ResetDevice = _ft_function("FT_ResetDevice", (_IN, FT_HANDLE, "ftHandle"))
-    FT_SetDtr = _ft_function("FT_SetDtr", (_IN, FT_HANDLE, "ftHandle"))
-    FT_ClrDtr = _ft_function("FT_ClrDtr", (_IN, FT_HANDLE, "ftHandle"))
-    FT_SetRts = _ft_function("FT_SetRts", (_IN, FT_HANDLE, "ftHandle"))
-    FT_ClrRts = _ft_function("FT_ClrRts", (_IN, FT_HANDLE, "ftHandle"))
+    FT_Close = _ft_function(
+        "FT_Close",
+        (_IN, FT_HANDLE, "ftHandle"),
+    )
+    FT_ResetDevice = _ft_function(
+        "FT_ResetDevice",
+        (_IN, FT_HANDLE, "ftHandle"),
+    )
+    FT_ResetPort = _ft_function(
+        "FT_ResetPort",
+        (_IN, FT_HANDLE, "ftHandle"),
+    )
+    FT_CyclePort = _ft_function(
+        "FT_CyclePort",
+        (_IN, FT_HANDLE, "ftHandle"),
+    )
+    FT_SetDtr = _ft_function(
+        "FT_SetDtr",
+        (_IN, FT_HANDLE, "ftHandle"),
+    )
+    FT_ClrDtr = _ft_function(
+        "FT_ClrDtr",
+        (_IN, FT_HANDLE, "ftHandle"),
+    )
+    FT_SetRts = _ft_function(
+        "FT_SetRts",
+        (_IN, FT_HANDLE, "ftHandle"),
+    )
+    FT_ClrRts = _ft_function(
+        "FT_ClrRts",
+        (_IN, FT_HANDLE, "ftHandle"),
+    )
     FT_Purge = _ft_function(
         "FT_Purge",
         (_IN, FT_HANDLE, "ftHandle"),
@@ -175,6 +302,21 @@ def _load_imports():
         (_IN, FT_HANDLE, "ftHandle"),
         (_IN, DWORD, "dwBaudRate"),
     )
+    FT_SetDataCharacteristics = _ft_function(
+        "FT_SetDataCharacteristics",
+        (_IN, FT_HANDLE, "ftHandle"),
+        (_IN, UCHAR, "uWordLength"),
+        (_IN, UCHAR, "uStopBits"),
+        (_IN, UCHAR, "uParity"),
+    )
+    FT_SetBreakOn = _ft_function(
+        "FT_SetBreakOn",
+        (_IN, FT_HANDLE, "ftHandle"),
+    )
+    FT_SetBreakOff = _ft_function(
+        "FT_SetBreakOff",
+        (_IN, FT_HANDLE, "ftHandle"),
+    )
     FT_GetModemStatus = _ft_function(
         "FT_GetModemStatus",
         (_IN, FT_HANDLE, "ftHandle"),
@@ -183,10 +325,10 @@ def _load_imports():
     FT_SetChars = _ft_function(
         "FT_SetChars",
         (_IN, FT_HANDLE, "ftHandle"),
-        (_IN, UCHAR, "ucEventChar"),
-        (_IN, UCHAR, "ucEventCharEnabled"),
-        (_IN, UCHAR, "ucErrorChar"),
-        (_IN, UCHAR, "ucErrorCharEnabled"),
+        (_IN, UCHAR, "uEventChar"),
+        (_IN, UCHAR, "uEventCharEnabled"),
+        (_IN, UCHAR, "uErrorChar"),
+        (_IN, UCHAR, "uErrorCharEnabled"),
     )
     FT_SetLatencyTimer = _ft_function(
         "FT_SetLatencyTimer",
@@ -203,6 +345,10 @@ def _load_imports():
         (_IN, FT_HANDLE, "ftHandle"),
         (_IN, UCHAR, "ucMask"),
         (_IN, UCHAR, "ucEnable"),
+    )
+    FT_GetBitMode = _ft_function(
+        "FT_GetBitMode",
+        (_IN, FT_HANDLE, "ftHandle"),
     )
     FT_SetTimeouts = _ft_function(
         "FT_SetTimeouts",
@@ -266,35 +412,15 @@ def _load_imports():
     )
 
 
-def _ft_function(name, *args):
-    def errcheck(result, _, args):
-        _logger.debug("%s%s=%s", function.name, args, result)
-        if result != FT_OK:
-            raise SystemError()
-
-        return args
-
-    if isinstance(_lib, Exception):
-        raise _lib
-
-    argtypes = (arg[1] for arg in args)
-    paramflags = tuple((arg[0], arg[2]) for arg in args)
-    prototype = CFUNCTYPE(FT_STATUS, *argtypes)
-    function = prototype((name, _lib), paramflags)
-    function.name = name
-    function.errcheck = errcheck
-    return function
-
-
 class _Handle:
     def __init__(self, dev, handle, rx_event):
         self.dev = dev
         self.handle = handle
+        self.rx_event = rx_event
         self.event_char = 0
         self.event_char_enabled = 0
         self.error_char = 0
         self.error_char_enabled = 0
-        self.rx_event = rx_event
 
 
 class _Device:
@@ -392,18 +518,21 @@ class _D2xx(usb.backend.IBackend):
             flags, type, dev_id, loc_id, handle = FT_GetDeviceInfoDetail(
                 index, lpSerialNumber, lpDescription
             )
-            serial_number = lpSerialNumber.value.decode("ascii")
-            description = lpDescription.value.decode("ascii")
+            serial_number = lpSerialNumber.value.decode("cp1252")
+            description = lpDescription.value.decode("cp1252")
             _logger.info(
-                "Found device: ID=%04X:%04X, serial_number='%s', description='%s'",
+                "Found device: ID=%04X:%04X, flags=0x%08X, serial_number='%s', description='%s'",
                 dev_id & 0xFFFF,
                 (dev_id >> 16) & 0xFFFF,
+                flags,
                 serial_number,
                 description,
             )
-            yield _Device(
-                flags, type, dev_id, loc_id, handle, serial_number, description
-            )
+
+            if flags & 1 == 0:
+                yield _Device(
+                    flags, type, dev_id, loc_id, handle, serial_number, description
+                )
 
     def get_device_descriptor(self, dev):
         _logger.debug("get_device_descriptor")
@@ -456,7 +585,14 @@ class _D2xx(usb.backend.IBackend):
 
     def open_device(self, dev):
         _logger.debug("open_device")
-        handle = FT_OpenEx(dev.serial_number.encode("ascii"), FT_OPEN_BY_SERIAL_NUMBER)
+        handle = FT_OpenEx(dev.serial_number.encode("cp1252"), FT_OPEN_BY_SERIAL_NUMBER)
+        version = FT_GetDriverVersion(handle)
+        _logger.info(
+            "FTDI Driver V%X.%X.%X",
+            (version >> 16) & 0xFF,
+            (version >> 8) & 0xFF,
+            version & 0xFF,
+        )
         rx_event = CreateEventW(None, 0, 0, None)
         FT_SetTimeouts(handle, 5000, 1000)
         FT_SetEventNotification(handle, FT_EVENT_RXCHAR, rx_event)
@@ -489,9 +625,9 @@ class _D2xx(usb.backend.IBackend):
         if len(data) < 2:
             return 0
 
-        status = WaitForSingleObject(dev_handle.rx_event, 10)
-        if status != 0:
-            return 0
+        # status = WaitForSingleObject(dev_handle.rx_event, 10)
+        # if status != 0:
+        #    return 0
 
         rx_bytes = FT_GetQueueStatus(dev_handle.handle)
         if rx_bytes == 0:
@@ -502,8 +638,6 @@ class _D2xx(usb.backend.IBackend):
 
         if rx_bytes > len(data) - 2:
             rx_bytes = len(data) - 2
-
-        # rx_bytes = len(data) - 2
 
         c_data = (c_ubyte * len(data)).from_buffer(data)
         bytes_returned = FT_Read(
@@ -522,11 +656,11 @@ class _D2xx(usb.backend.IBackend):
             wIndex,
         )
 
-        if bmRequestType == 0x80:
+        if bmRequestType & 0x7F == 0:
             self._ctrl_transfer_standard(
                 dev_handle, bmRequestType, bRequest, wValue, wIndex, data
             )
-        elif bmRequestType == 0xC0 or bmRequestType == 0x40:
+        elif bmRequestType & 0x7F == 0x40:
             self._ctrl_transfer_vendor(
                 dev_handle, bmRequestType, bRequest, wValue, wIndex, data
             )
@@ -536,7 +670,7 @@ class _D2xx(usb.backend.IBackend):
     def _ctrl_transfer_standard(
         self, dev_handle, bmRequestType, bRequest, wValue, wIndex, data
     ):
-        if bRequest == 6:  # get_descriptor
+        if bmRequestType & 0x80 == 0x80 and bRequest == 6:  # get_descriptor
             desc_index = wValue & 0xFF
             desc_type = (wValue >> 8) & 0xFF
             if desc_type == DESC_TYPE_STRING:
@@ -568,7 +702,7 @@ class _D2xx(usb.backend.IBackend):
     def _ctrl_transfer_vendor(
         self, dev_handle, bmRequestType, bRequest, wValue, wIndex, data
     ):
-        if bRequest == Ftdi.SIO_REQ_RESET:
+        if bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_RESET:
             if wValue == Ftdi.SIO_RESET_SIO:
                 FT_ResetDevice(dev_handle.handle)
                 return 0
@@ -578,7 +712,7 @@ class _D2xx(usb.backend.IBackend):
             elif wValue == Ftdi.SIO_RESET_PURGE_TX:
                 FT_Purge(dev_handle.handle, FT_PURGE_TX)
                 return 0
-        elif bRequest == Ftdi.SIO_REQ_SET_MODEM_CTRL:
+        elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_MODEM_CTRL:
             if wValue & 0x0100:
                 if wValue & 0x01:
                     FT_SetDtr(dev_handle.handle)
@@ -590,20 +724,32 @@ class _D2xx(usb.backend.IBackend):
                 else:
                     FT_ClrRts(dev_handle.handle)
             return 0
-        elif bRequest == Ftdi.SIO_REQ_SET_FLOW_CTRL:
+        elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_FLOW_CTRL:
             FT_SetFlowControl(dev_handle.handle, wIndex & 0xFF00, 0x11, 0x13)
             return 0
-        elif bRequest == Ftdi.SIO_REQ_SET_BAUDRATE:
+        elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_BAUDRATE:
+            # TODO
             FT_SetBaudRate(dev_handle.handle, 0)
             return 0
-        elif bRequest == Ftdi.SIO_REQ_SET_DATA:
-            pass
-        elif bRequest == Ftdi.SIO_REQ_POLL_MODEM_STATUS:
+        elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_DATA:
+            word_length = wValue & 0xF
+            parity = (wValue >> 8) & 0x7
+            stop_bits = (wValue >> 11) & 0x3
+            line_break = (wValue >> 14) & 0x1
+            FT_SetDataCharacteristics(dev_handle.handle, word_length, stop_bits, parity)
+            if line_break:
+                FT_SetBreakOn(dev_handle.handle)
+            else:
+                FT_SetBreakOff(dev_handle.handle)
+            return 0
+        elif (
+            bmRequestType & 0x80 == 0x80 and bRequest == Ftdi.SIO_REQ_POLL_MODEM_STATUS
+        ):
             status = FT_GetModemStatus(dev_handle.handle)
             data[0] = status & 0xFF
             data[1] = (status >> 8) & 0xFF
             return 0
-        elif bRequest == Ftdi.SIO_REQ_SET_EVENT_CHAR:
+        elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_EVENT_CHAR:
             dev_handle.event_char = wValue & 0xFF
             dev_handle.event_char_enabled = (wValue >> 8) & 0xFF
             FT_SetChars(
@@ -614,7 +760,7 @@ class _D2xx(usb.backend.IBackend):
                 dev_handle.error_char_enabled,
             )
             return 0
-        elif bRequest == Ftdi.SIO_REQ_SET_ERROR_CHAR:
+        elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_ERROR_CHAR:
             dev_handle.error_char = wValue & 0xFF
             dev_handle.error_char_enabled = (wValue >> 8) & 0xFF
             FT_SetChars(
@@ -625,24 +771,36 @@ class _D2xx(usb.backend.IBackend):
                 dev_handle.error_char_enabled,
             )
             return 0
-        elif bRequest == Ftdi.SIO_REQ_SET_LATENCY_TIMER:
+        elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_LATENCY_TIMER:
             FT_SetLatencyTimer(dev_handle.handle, wValue)
             return 0
-        elif bRequest == Ftdi.SIO_REQ_GET_LATENCY_TIMER:
-            return FT_GetLatencyTimer(dev_handle.handle)
+        elif (
+            bmRequestType & 0x80 == 0x80 and bRequest == Ftdi.SIO_REQ_GET_LATENCY_TIMER
+        ):
+            data[0] = FT_GetLatencyTimer(dev_handle.handle)
+            return 0
         elif bRequest == Ftdi.SIO_REQ_SET_BITMODE:
             mode = (wValue >> 8) & 0xFF
             mask = wValue & 0xFF
             FT_SetBitMode(dev_handle.handle, mask, mode)
             return 0
-        elif bRequest == Ftdi.SIO_REQ_READ_PINS:
+        elif bmRequestType & 0x80 == 0x80 and bRequest == Ftdi.SIO_REQ_READ_PINS:
+            data[0] = FT_GetBitMode(dev_handle.handle)
             return 0
-        elif bRequest == Ftdi.SIO_REQ_READ_EEPROM:
-            return FT_ReadEE(dev_handle.handle)
-        elif bRequest == Ftdi.SIO_REQ_WRITE_EEPROM:
-            return FT_WriteEE(dev_handle.handle)
-        elif bRequest == Ftdi.SIO_REQ_ERASE_EEPROM:
-            return FT_EraseEE(dev_handle.handle)
+        elif bmRequestType & 0x80 == 0x80 and bRequest == Ftdi.SIO_REQ_READ_EEPROM:
+            if len(data) < 2:
+                raise USBError("Invalid buffer size")
+
+            value = FT_ReadEE(dev_handle.handle, wIndex)
+            data[0] = value & 0xFF
+            data[1] = (value >> 8) & 0xFF
+            return 0
+        elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_WRITE_EEPROM:
+            FT_WriteEE(dev_handle.handle, wIndex)
+            return 0
+        elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_ERASE_EEPROM:
+            FT_EraseEE(dev_handle.handle)
+            return 0
 
         raise USBError("Not implemented")
 
