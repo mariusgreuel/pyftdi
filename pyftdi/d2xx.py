@@ -4,7 +4,6 @@
 
 """libusb emulation backend for FTDI D2XX driver."""
 
-from enum import IntEnum
 from sys import platform
 from logging import getLogger
 from ctypes import (
@@ -25,6 +24,12 @@ import usb.backend
 from usb.core import Device as USBError
 from usb.util import DESC_TYPE_STRING
 from pyftdi.ftdi import Ftdi
+
+# pylint: disable-msg=invalid-name
+# pylint: disable-msg=global-statement
+# pylint: disable-msg=too-few-public-methods
+# pylint: disable-msg=too-many-arguments
+# pylint: disable-msg=too-many-instance-attributes
 
 __author__ = "Marius Greuel"
 
@@ -71,16 +76,6 @@ FT_ReadEE = None
 FT_WriteEE = None
 FT_EraseEE = None
 
-_IN = 1
-_OUT = 2
-
-FT_OPEN_BY_SERIAL_NUMBER = 1
-
-FT_EVENT_RXCHAR = 1
-
-FT_PURGE_RX = 1
-FT_PURGE_TX = 2
-
 UCHAR = c_ubyte
 USHORT = c_ushort
 ULONG = c_ulong
@@ -89,63 +84,93 @@ DWORD = c_uint
 FT_STATUS = c_ulong
 FT_HANDLE = c_void_p
 
+_IN = 1
+_OUT = 2
 
-class ERROR(IntEnum):
-    FT_OK = 0
-    FT_INVALID_HANDLE = 1
-    FT_DEVICE_NOT_FOUND = 2
-    FT_DEVICE_NOT_OPENED = 3
-    FT_IO_ERROR = 4
-    FT_INSUFFICIENT_RESOURCES = 5
-    FT_INVALID_PARAMETER = 6
-    FT_INVALID_BAUD_RATE = 7
-    FT_DEVICE_NOT_OPENED_FOR_ERASE = 8
-    FT_DEVICE_NOT_OPENED_FOR_WRITE = 9
-    FT_FAILED_TO_WRITE_DEVICE = 10
-    FT_EEPROM_READ_FAILED = 11
-    FT_EEPROM_WRITE_FAILED = 12
-    FT_EEPROM_ERASE_FAILED = 13
-    FT_EEPROM_NOT_PRESENT = 14
-    FT_EEPROM_NOT_PROGRAMMED = 15
-    FT_INVALID_ARGS = 16
-    FT_NOT_SUPPORTED = 17
-    FT_OTHER_ERROR = 18
-    FT_DEVICE_LIST_NOT_READY = 19
+FT_OK = 0
+FT_INVALID_HANDLE = 1
+FT_DEVICE_NOT_FOUND = 2
+FT_DEVICE_NOT_OPENED = 3
+FT_IO_ERROR = 4
+FT_INSUFFICIENT_RESOURCES = 5
+FT_INVALID_PARAMETER = 6
+FT_INVALID_BAUD_RATE = 7
+FT_DEVICE_NOT_OPENED_FOR_ERASE = 8
+FT_DEVICE_NOT_OPENED_FOR_WRITE = 9
+FT_FAILED_TO_WRITE_DEVICE = 10
+FT_EEPROM_READ_FAILED = 11
+FT_EEPROM_WRITE_FAILED = 12
+FT_EEPROM_ERASE_FAILED = 13
+FT_EEPROM_NOT_PRESENT = 14
+FT_EEPROM_NOT_PROGRAMMED = 15
+FT_INVALID_ARGS = 16
+FT_NOT_SUPPORTED = 17
+FT_OTHER_ERROR = 18
+FT_DEVICE_LIST_NOT_READY = 19
 
+FT_DEVICE_BM = 0
+FT_DEVICE_AM = 1
+FT_DEVICE_100AX = 2
+FT_DEVICE_UNKNOWN = 3
+FT_DEVICE_2232C = 4
+FT_DEVICE_232R = 5
+FT_DEVICE_2232H = 6
+FT_DEVICE_4232H = 7
+FT_DEVICE_232H = 8
+FT_DEVICE_X_SERIES = 9
+FT_DEVICE_4222H_0 = 10
+FT_DEVICE_4222H_1_2 = 11
+FT_DEVICE_4222H_3 = 12
+FT_DEVICE_4222_PROG = 13
+FT_DEVICE_900 = 14
+FT_DEVICE_930 = 15
+FT_DEVICE_UMFTPD3A = 16
+FT_DEVICE_2233HP = 17
+FT_DEVICE_4233HP = 18
+FT_DEVICE_2232HP = 19
+FT_DEVICE_4232HP = 20
+FT_DEVICE_233HP = 21
+FT_DEVICE_232HP = 22
+FT_DEVICE_2232HA = 23
+FT_DEVICE_4232HA = 24
+FT_DEVICE_232RN = 25
+
+FT_OPEN_BY_SERIAL_NUMBER = 1
+
+FT_EVENT_RXCHAR = 1
+
+FT_PURGE_RX = 1
+FT_PURGE_TX = 2
 
 ERRORS = {
-    ERROR.FT_OK: "OK",
-    ERROR.FT_INVALID_HANDLE: "Invalid_handle",
-    ERROR.FT_DEVICE_NOT_FOUND: "Device not found",
-    ERROR.FT_DEVICE_NOT_OPENED: "Device not opened",
-    ERROR.FT_IO_ERROR: "I/O error",
-    ERROR.FT_INSUFFICIENT_RESOURCES: "Insufficient resources",
-    ERROR.FT_INVALID_PARAMETER: "Invalid parameter",
-    ERROR.FT_INVALID_BAUD_RATE: "Invalid baud rate",
-    ERROR.FT_DEVICE_NOT_OPENED_FOR_ERASE: "Device not opened for erase",
-    ERROR.FT_DEVICE_NOT_OPENED_FOR_WRITE: "Device not opened for write",
-    ERROR.FT_FAILED_TO_WRITE_DEVICE: "Failed to write device",
-    ERROR.FT_EEPROM_READ_FAILED: "EEPROM read failed",
-    ERROR.FT_EEPROM_WRITE_FAILED: "EEPROM write failed",
-    ERROR.FT_EEPROM_ERASE_FAILED: "EEPROM erase failed",
-    ERROR.FT_EEPROM_NOT_PRESENT: "EEPROM not present",
-    ERROR.FT_EEPROM_NOT_PROGRAMMED: "EEPROM not programmed",
-    ERROR.FT_INVALID_ARGS: "Unvalid arguments",
-    ERROR.FT_NOT_SUPPORTED: "Not supported",
-    ERROR.FT_OTHER_ERROR: "Other error",
-    ERROR.FT_DEVICE_LIST_NOT_READY: "Device list not ready",
+    FT_OK: "OK",
+    FT_INVALID_HANDLE: "Invalid_handle",
+    FT_DEVICE_NOT_FOUND: "Device not found",
+    FT_DEVICE_NOT_OPENED: "Device not opened",
+    FT_IO_ERROR: "I/O error",
+    FT_INSUFFICIENT_RESOURCES: "Insufficient resources",
+    FT_INVALID_PARAMETER: "Invalid parameter",
+    FT_INVALID_BAUD_RATE: "Invalid baud rate",
+    FT_DEVICE_NOT_OPENED_FOR_ERASE: "Device not opened for erase",
+    FT_DEVICE_NOT_OPENED_FOR_WRITE: "Device not opened for write",
+    FT_FAILED_TO_WRITE_DEVICE: "Failed to write device",
+    FT_EEPROM_READ_FAILED: "EEPROM read failed",
+    FT_EEPROM_WRITE_FAILED: "EEPROM write failed",
+    FT_EEPROM_ERASE_FAILED: "EEPROM erase failed",
+    FT_EEPROM_NOT_PRESENT: "EEPROM not present",
+    FT_EEPROM_NOT_PROGRAMMED: "EEPROM not programmed",
+    FT_INVALID_ARGS: "Unvalid arguments",
+    FT_NOT_SUPPORTED: "Not supported",
+    FT_OTHER_ERROR: "Other error",
+    FT_DEVICE_LIST_NOT_READY: "Device list not ready",
 }
 
 
 def _ft_function(name, *args):
     def errcheck(result, _, args):
-        if result != ERROR.FT_OK:
+        if result != FT_OK:
             _logger.error("%s%s=%s", function.name, args, result)
-            if result in ERRORS:
-                message = ERRORS[result]
-            else:
-                message = result
-            raise RuntimeError(f"FTDI API failed: {message}.")
+            raise RuntimeError(f"FTDI API failed: {ERRORS.get(result, result)}.")
 
         _logger.debug("%s%s=%s", function.name, args, result)
         return args
@@ -172,9 +197,10 @@ def _load_library(_):
             "Failed to load FTDI D2XX driver. You may need to reinstall the FTDI drivers: %s",
             ex,
         )
-        raise FileNotFoundError(f"Failed to load FTDI D2XX driver: {ex}")
+        raise FileNotFoundError(f"Failed to load FTDI D2XX driver: {ex}") from ex
 
 
+# pylint: disable-next=too-many-statements
 def _load_imports():
     global CreateEventW
     global WaitForSingleObject
@@ -426,9 +452,11 @@ class _Handle:
 
 
 class _Device:
-    def __init__(self, flags, type, dev_id, loc_id, handle, serial_number, description):
+    def __init__(
+        self, flags, dev_type, dev_id, loc_id, handle, serial_number, description
+    ):
         self.flags = flags
-        self.type = type
+        self.dev_type = dev_type
         self.dev_id = dev_id
         self.loc_id = loc_id
         self.handle = handle
@@ -517,7 +545,7 @@ class _D2xx(usb.backend.IBackend):
         for index in range(num_devs):
             lpSerialNumber = create_string_buffer(16)
             lpDescription = create_string_buffer(64)
-            flags, type, dev_id, loc_id, handle = FT_GetDeviceInfoDetail(
+            flags, dev_type, dev_id, loc_id, handle = FT_GetDeviceInfoDetail(
                 index, lpSerialNumber, lpDescription
             )
             serial_number = lpSerialNumber.value.decode("cp1252")
@@ -533,7 +561,7 @@ class _D2xx(usb.backend.IBackend):
 
             if flags & 1 == 0:
                 yield _Device(
-                    flags, type, dev_id, loc_id, handle, serial_number, description
+                    flags, dev_type, dev_id, loc_id, handle, serial_number, description
                 )
 
     def get_device_descriptor(self, dev):
@@ -582,8 +610,8 @@ class _D2xx(usb.backend.IBackend):
 
         if ep == 0:
             return _EndpointDescriptor(dev, 0x81)
-        else:
-            return _EndpointDescriptor(dev, 0x02)
+
+        return _EndpointDescriptor(dev, 0x02)
 
     def open_device(self, dev):
         _logger.debug("open_device")
@@ -618,13 +646,25 @@ class _D2xx(usb.backend.IBackend):
         _logger.debug("release_interface: intf=%s", intf)
 
     def bulk_write(self, dev_handle, ep, intf, data, timeout):
-        _logger.debug("bulk_write: ep=%s, intf=%s, len=%s", ep, intf, len(data))
+        _logger.debug(
+            "bulk_write: ep=%s, intf=%s, len=%s, timeout=%s",
+            ep,
+            intf,
+            len(data),
+            timeout,
+        )
         c_data = (c_ubyte * len(data)).from_buffer(data)
         return FT_Write(dev_handle.handle, c_data, len(data))
 
-    def bulk_read(self, dev_handle, ep, intf, data, timeout):
-        _logger.debug("bulk_read: ep=%s, intf=%s, len=%s", ep, intf, len(data))
-        if len(data) < 2:
+    def bulk_read(self, dev_handle, ep, intf, buff, timeout):
+        _logger.debug(
+            "bulk_read: ep=%s, intf=%s, len=%s, timeout=%s",
+            ep,
+            intf,
+            len(buff),
+            timeout,
+        )
+        if len(buff) < 2:
             return 0
 
         status = WaitForSingleObject(dev_handle.rx_event, 10)
@@ -635,15 +675,15 @@ class _D2xx(usb.backend.IBackend):
         if rx_bytes == 0:
             return 0
 
-        data[0] = 0
-        data[1] = 0
+        buff[0] = 0
+        buff[1] = 0
 
-        if rx_bytes > len(data) - 2:
-            rx_bytes = len(data) - 2
+        if rx_bytes > len(buff) - 2:
+            rx_bytes = len(buff) - 2
 
-        c_data = (c_ubyte * len(data)).from_buffer(data)
+        c_buff = (c_ubyte * len(buff)).from_buffer(buff)
         bytes_returned = FT_Read(
-            dev_handle.handle, cast(byref(c_data, 2), POINTER(c_ubyte)), rx_bytes
+            dev_handle.handle, cast(byref(c_buff, 2), POINTER(c_ubyte)), rx_bytes
         )
         return bytes_returned + 2
 
@@ -660,7 +700,7 @@ class _D2xx(usb.backend.IBackend):
 
         if bmRequestType & 0x7F == 0:
             self._ctrl_transfer_standard(
-                dev_handle, bmRequestType, bRequest, wValue, wIndex, data
+                dev_handle, bmRequestType, bRequest, wValue, data
             )
         elif bmRequestType & 0x7F == 0x40:
             self._ctrl_transfer_vendor(
@@ -670,7 +710,7 @@ class _D2xx(usb.backend.IBackend):
             raise USBError("Not implemented")
 
     def _ctrl_transfer_standard(
-        self, dev_handle, bmRequestType, bRequest, wValue, wIndex, data
+        self, dev_handle, bmRequestType, bRequest, wValue, data
     ):
         if bmRequestType & 0x80 == 0x80 and bRequest == 6:  # get_descriptor
             desc_index = wValue & 0xFF
@@ -683,7 +723,8 @@ class _D2xx(usb.backend.IBackend):
                     data[2] = 0x09
                     data[3] = 0x04
                     return 4
-                elif desc_index == 1:  # iManufacturer
+
+                if desc_index == 1:  # iManufacturer
                     s = "FTDI"
                 elif desc_index == 2:  # iProduct
                     s = dev_handle.dev.description
@@ -701,6 +742,7 @@ class _D2xx(usb.backend.IBackend):
 
         raise USBError("Not implemented")
 
+    # pylint: disable-next=too-many-locals,too-many-branches,too-many-statements,too-many-return-statements
     def _ctrl_transfer_vendor(
         self, dev_handle, bmRequestType, bRequest, wValue, wIndex, data
     ):
@@ -708,10 +750,10 @@ class _D2xx(usb.backend.IBackend):
             if wValue == Ftdi.SIO_RESET_SIO:
                 FT_ResetDevice(dev_handle.handle)
                 return 0
-            elif wValue == Ftdi.SIO_RESET_PURGE_RX:
+            if wValue == Ftdi.SIO_RESET_PURGE_RX:
                 FT_Purge(dev_handle.handle, FT_PURGE_RX)
                 return 0
-            elif wValue == Ftdi.SIO_RESET_PURGE_TX:
+            if wValue == Ftdi.SIO_RESET_PURGE_TX:
                 FT_Purge(dev_handle.handle, FT_PURGE_TX)
                 return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_MODEM_CTRL:
@@ -731,6 +773,13 @@ class _D2xx(usb.backend.IBackend):
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_BAUDRATE:
             # TODO
+            divisor = wValue & 0x3FFF
+            subdivisor = (wValue >> 14) & 3
+            if self._is_r_type(dev_handle.dev.dev_type):
+                subdivisor |= (wIndex & 1) << 2
+            elif self._is_h_type(dev_handle.dev.dev_type):
+                subdivisor |= (wIndex & 0x100) >> 6
+            clock = 12_000_000 if (wIndex >> 9) & 1 else 3_000_000
             FT_SetBaudRate(dev_handle.handle, 0)
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_DATA:
@@ -806,8 +855,32 @@ class _D2xx(usb.backend.IBackend):
 
         raise USBError("Not implemented")
 
+    def _is_r_type(self, dev_type):
+        return dev_type in (
+            FT_DEVICE_BM,
+            FT_DEVICE_232R,
+            FT_DEVICE_232RN,
+            FT_DEVICE_2232C,
+        )
+
+    def _is_h_type(self, dev_type):
+        return dev_type in (
+            FT_DEVICE_232H,
+            FT_DEVICE_232HP,
+            FT_DEVICE_233HP,
+            FT_DEVICE_2232H,
+            FT_DEVICE_2232HA,
+            FT_DEVICE_2232HP,
+            FT_DEVICE_2233HP,
+            FT_DEVICE_4232H,
+            FT_DEVICE_4232HA,
+            FT_DEVICE_4232HP,
+            FT_DEVICE_4233HP,
+        )
+
 
 def get_backend(find_library=None):
+    """Get the libusb emulation backend for the FTDI D2XX driver."""
     global _lib
     try:
         if _lib is None:

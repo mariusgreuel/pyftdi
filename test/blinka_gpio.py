@@ -14,8 +14,8 @@ import digitalio
 from adafruit_blinka.microcontroller.ftdi_mpsse.mpsse.pin import Pin
 
 leds = []
-for i in range(12):
-    led = digitalio.DigitalInOut(Pin(1+i))
+for i in range(8):
+    led = digitalio.DigitalInOut(Pin(8 + i))
     led.direction = digitalio.Direction.OUTPUT
     leds.append(led)
 
@@ -25,7 +25,7 @@ while True:
     leds[index].value ^= 1
     time.sleep(0.1)
     leds[index].value ^= 1
-    if index == 11:
+    if index == len(leds) - 1:
         inc = -1
     elif index == 0:
         inc = 1
