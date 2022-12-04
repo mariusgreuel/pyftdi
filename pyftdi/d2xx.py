@@ -170,7 +170,9 @@ def _ft_function(name, *args):
     def errcheck(result, _, args):
         if result != FT_OK:
             _logger.error("%s%s=%s", function.name, args, result)
-            raise RuntimeError(f"FTDI API failed: {ERRORS.get(result, result)}.")
+            raise RuntimeError(
+                f"FTDI API call '{function.name}' failed: {ERRORS.get(result, result)}."
+            )
 
         _logger.debug("%s%s=%s", function.name, args, result)
         return args
@@ -462,6 +464,28 @@ class _Device:
         self.handle = handle
         self.serial_number = serial_number
         self.description = description
+        self.num_interfaces = self._get_num_interfaces(dev_type)
+        self.available_interfaces = 0
+
+    def _get_num_interfaces(self, dev_type):
+        if dev_type in (
+            FT_DEVICE_4232H,
+            FT_DEVICE_4232HA,
+            FT_DEVICE_4232HP,
+            FT_DEVICE_4233HP,
+        ):
+            return 4
+
+        if dev_type in (
+            FT_DEVICE_2232C,
+            FT_DEVICE_2232H,
+            FT_DEVICE_2232HA,
+            FT_DEVICE_2232HP,
+            FT_DEVICE_2233HP,
+        ):
+            return 2
+
+        return 1
 
 
 class _DeviceDescriptor:
@@ -489,11 +513,11 @@ class _DeviceDescriptor:
 
 
 class _ConfigurationDescriptor:
-    def __init__(self, _):
+    def __init__(self, dev):
         self.bLength = 0x09
         self.bDescriptorType = 0x02
         self.wTotalLength = 0x0020
-        self.bNumInterfaces = 0x01
+        self.bNumInterfaces = dev.num_interfaces
         self.bConfigurationValue = 0x01
         self.iConfiguration = 0x00
         self.bmAttributes = 0xA0
@@ -506,10 +530,10 @@ class _ConfigurationDescriptor:
 
 
 class _InterfaceDescriptor:
-    def __init__(self, _):
+    def __init__(self, intf):
         self.bLength = 0x09
         self.bDescriptorType = 0x04
-        self.bInterfaceNumber = 0x00
+        self.bInterfaceNumber = intf
         self.bAlternateSetting = 0x00
         self.bNumEndpoints = 0x02
         self.bInterfaceClass = 0xFF
@@ -524,7 +548,7 @@ class _InterfaceDescriptor:
 
 
 class _EndpointDescriptor:
-    def __init__(self, _, bEndpointAddress):
+    def __init__(self, bEndpointAddress):
         self.bLength = 0x07
         self.bDescriptorType = 0x05
         self.bEndpointAddress = bEndpointAddress
@@ -541,6 +565,8 @@ class _EndpointDescriptor:
 
 class _D2xx(usb.backend.IBackend):
     def enumerate_devices(self):
+        devices = []
+
         num_devs = FT_CreateDeviceInfoList()
         for index in range(num_devs):
             lpSerialNumber = create_string_buffer(16)
@@ -559,10 +585,40 @@ class _D2xx(usb.backend.IBackend):
                 description,
             )
 
+            device = _Device(
+                flags, dev_type, dev_id, loc_id, handle, serial_number, description
+            )
+
+            if self._has_multiple_interfaces(dev_type):
+                if len(device.serial_number) > 0:
+                    interface = ord(device.serial_number[-1]) - ord("A")
+                    if interface >= 0 and interface <= 4:
+                        device.available_interfaces |= 1 << interface
+                        device.serial_number = device.serial_number[:-1]
+                        device.description = device.description[:-1].rstrip()
+
             if flags & 1 == 0:
-                yield _Device(
-                    flags, dev_type, dev_id, loc_id, handle, serial_number, description
-                )
+                for d in devices:
+                    if d.serial_number == device.serial_number:
+                        d.available_interfaces |= device.available_interfaces
+                        break
+                else:
+                    devices.append(device)
+
+        return devices
+
+    def _has_multiple_interfaces(self, dev_type):
+        return dev_type in (
+            FT_DEVICE_2232C,
+            FT_DEVICE_2232H,
+            FT_DEVICE_2232HA,
+            FT_DEVICE_2232HP,
+            FT_DEVICE_2233HP,
+            FT_DEVICE_4232H,
+            FT_DEVICE_4232HA,
+            FT_DEVICE_4232HP,
+            FT_DEVICE_4233HP,
+        )
 
     def get_device_descriptor(self, dev):
         _logger.debug("get_device_descriptor")
@@ -583,12 +639,12 @@ class _D2xx(usb.backend.IBackend):
 
         if config >= 1:
             raise IndexError("Invalid configuration index " + str(config))
-        if intf >= 1:
+        if intf >= dev.num_interfaces:
             raise IndexError("Invalid interface index " + str(intf))
         if alt >= 1:
             raise IndexError("Invalid alternate setting index " + str(alt))
 
-        return _InterfaceDescriptor(dev)
+        return _InterfaceDescriptor(intf)
 
     def get_endpoint_descriptor(self, dev, ep, intf, alt, config):
         _logger.debug(
@@ -603,19 +659,22 @@ class _D2xx(usb.backend.IBackend):
             raise IndexError("Invalid endpoint index " + str(ep))
         if config >= 1:
             raise IndexError("Invalid configuration index " + str(config))
-        if intf >= 1:
+        if intf >= dev.num_interfaces:
             raise IndexError("Invalid interface index " + str(intf))
         if alt >= 1:
             raise IndexError("Invalid alternate setting index " + str(alt))
 
         if ep == 0:
-            return _EndpointDescriptor(dev, 0x81)
+            return _EndpointDescriptor(0x81)
 
-        return _EndpointDescriptor(dev, 0x02)
+        return _EndpointDescriptor(0x02)
 
     def open_device(self, dev):
-        _logger.debug("open_device")
-        handle = FT_OpenEx(dev.serial_number.encode("cp1252"), FT_OPEN_BY_SERIAL_NUMBER)
+        _logger.debug("open_device: serial_number=%s", dev.serial_number)
+
+        serial_number = dev.serial_number + "A"
+
+        handle = FT_OpenEx(serial_number.encode("cp1252"), FT_OPEN_BY_SERIAL_NUMBER)
         version = FT_GetDriverVersion(handle)
         _logger.info(
             "FTDI Driver V%X.%X.%X",
@@ -781,7 +840,7 @@ class _D2xx(usb.backend.IBackend):
                 subdivisor |= (wIndex & 0x100) >> 6
             clock = 12_000_000 if (wIndex >> 9) & 1 else 3_000_000
             FT_SetBaudRate(dev_handle.handle, 0)
-            return 0
+            # return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_DATA:
             word_length = wValue & 0xF
             parity = (wValue >> 8) & 0x7

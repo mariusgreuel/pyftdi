@@ -1,15 +1,20 @@
 import logging
 import time
+import pyetw
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+root_logger = logging.getLogger()
+root_logger.handlers = []
+root_logger.addHandler(pyetw.LoggerHandler())
+
 from pyftdi.gpio import GpioAsyncController
 
-logger = logging.getLogger("pyftdi.d2xx")
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-logger.addHandler(handler)
+
+logging.getLogger("pyftdi.ftdi").setLevel(logging.DEBUG)
+logging.getLogger("pyftdi.d2xx").setLevel(logging.DEBUG)
 
 gpio = GpioAsyncController()
-gpio.configure("ftdi://::FT*/1", direction=0xFF)
+gpio.configure("ftdi://::FT*/2", direction=0xFF)
 
 index = 0
 inc = 1

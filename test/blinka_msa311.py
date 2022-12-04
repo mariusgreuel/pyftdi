@@ -12,17 +12,18 @@ handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s -
 
 import board
 import digitalio
-import adafruit_bme680
+from adafruit_msa3xx import MSA311
 from adafruit_blinka.microcontroller.ftdi_mpsse.mpsse.pin import Pin
 
+#spi = board.SPI()
+i2c = board.I2C()
+msa = MSA311(i2c)
+
 leds = []
-for i in range(4, 16):
+for i in range(3, 16):
     led = digitalio.DigitalInOut(Pin(i))
     led.direction = digitalio.Direction.OUTPUT
     leds.append(led)
-
-i2c = board.I2C()
-bme680 = adafruit_bme680.Adafruit_BME680_I2C(i2c, refresh_rate=1)
 
 logger.setLevel(logging.INFO)
 
@@ -31,8 +32,8 @@ inc = 1
 while True:
     leds[index].value = 1
 
-    print(f"Temperature: {bme680.temperature:0.1f}C, Humidity: {bme680.relative_humidity:0.1f}%")
-    time.sleep(1)
+    print("MSA311: %f %f %f" % msa.acceleration)
+    time.sleep(0.1)
 
     leds[index].value = 0
     if index == len(leds) - 1:

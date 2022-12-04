@@ -1,0 +1,350 @@
+
+    =========================== USB Port9 ===========================
+
+Connection Status        : 0x01 (Device is connected)
+Port Chain               : 2-9
+Properties               : 0x01
+ IsUserConnectable       : yes
+ PortIsDebugCapable      : no
+ PortHasMultiCompanions  : no
+ PortConnectorIsTypeC    : no
+ConnectionIndex          : 0x09 (Port 9)
+CompanionIndex           : 0
+ CompanionHubSymLnk      : USB#ROOT_HUB30#4&6970116&0&0#{f18a0e88-c30c-11d0-8815-00a0c906bed8}
+ CompanionPortNumber     : 0x18 (Port 24)
+ -> CompanionPortChain   : 2-24
+
+      ========================== Summary =========================
+Vendor ID                : 0x0403 (Future Technology Devices International Limited)
+Product ID               : 0x6010
+USB Version              : 2.00
+Port maximum Speed       : High-Speed (Companion Port 2-24 supports SuperSpeed)
+Device maximum Speed     : High-Speed
+Device Connection Speed  : High-Speed
+Self powered             : no
+Demanded Current         : 100 mA
+Used Endpoints           : 5
+
+      ======================== USB Device ========================
+
+        +++++++++++++++++ Device Information ++++++++++++++++++
+Device Description       : USB Composite Device
+Device Path              : \\?\USB#VID_0403&PID_6010#FT79WO09#{a5dcbf10-6530-11d2-901f-00c04fb951ed} (GUID_DEVINTERFACE_USB_DEVICE)
+Kernel Name              : \Device\USBPDO-10
+Device ID                : USB\VID_0403&PID_6010\FT79WO09
+Hardware IDs             : USB\VID_0403&PID_6010&REV_0700 USB\VID_0403&PID_6010
+Driver KeyName           : {36fc9e60-c465-11cf-8056-444553540000}\0022 (GUID_DEVCLASS_USB)
+Driver                   : \SystemRoot\System32\drivers\usbccgp.sys (Version: 10.0.19041.1949  Date: 2022-08-28)
+Driver Inf               : C:\Windows\inf\usb.inf
+Legacy BusType           : PNPBus
+Class                    : USB
+Class GUID               : {36fc9e60-c465-11cf-8056-444553540000} (GUID_DEVCLASS_USB)
+Service                  : usbccgp
+Enumerator               : USB
+Location Info            : Port_#0009.Hub_#0001
+Location IDs             : PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(9), ACPI(_SB_)#ACPI(PC00)#ACPI(XHCI)#ACPI(RHUB)#ACPI(HS09)
+Container ID             : {cceece4d-2a14-598f-9fbd-c57607b149d7}
+Manufacturer Info        : (Standard USB Host Controller)
+Capabilities             : 0x94 (Removable, UniqueID, SurpriseRemovalOK)
+Status                   : 0x0180600A (DN_DRIVER_LOADED, DN_STARTED, DN_DISABLEABLE, DN_REMOVABLE, DN_NT_ENUMERATOR, DN_NT_DRIVER)
+Problem Code             : 0
+Address                  : 9
+HcDisableSelectiveSuspend: 0
+EnableSelectiveSuspend   : 0
+SelectiveSuspendEnabled  : 0
+EnhancedPowerMgmtEnabled : 0
+IdleInWorkingState       : 0
+WakeFromSleepState       : 0
+Power State              : D0 (supported: D0, D3, wake from D0)
+ Child Device 1          : USB Serial Converter A
+  Device Path            : \\?\USB#VID_0403&PID_6010&MI_00#6&2e41fb96&0&0000#{219d0508-57a8-4ff5-97a1-bd86587c6c7e}
+  Kernel Name            : \Device\00000176
+  Device ID              : USB\VID_0403&PID_6010&MI_00\6&2E41FB96&0&0000
+  Class                  : USB
+  Driver KeyName         : {36fc9e60-c465-11cf-8056-444553540000}\0023 (GUID_DEVCLASS_USB)
+  Service                : FTDIBUS
+  Location               : 0000.0014.0000.009.000.000.000.000.000
+  LocationPaths          : PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(9)#USBMI(0)  PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(9)#USB(9)  ACPI(_SB_)#ACPI(PC00)#ACPI(XHCI)#ACPI(RHUB)#ACPI(HS09)#USBMI(0)  ACPI(_SB_)#ACPI(PC00)#ACPI(XHCI)#ACPI(RHUB)#ACPI(HS09)#USB(9)
+   Child Device 1        : USB Serial Port (COM7)
+    Device Path 1        : \\?\FTDIBUS#VID_0403+PID_6010+FT79WO09A#0000#{86e0d1e0-8089-11d0-9ce4-08003e301f73} (GUID_DEVINTERFACE_COMPORT)
+    Device Path 2        : \\?\FTDIBUS#VID_0403+PID_6010+FT79WO09A#0000#{4d36e978-e325-11ce-bfc1-08002be10318} (GUID_DEVINTERFACE_SERENUM_BUS_ENUMERATOR)
+    Kernel Name          : \Device\0000017a
+    Device ID            : FTDIBUS\VID_0403+PID_6010+FT79WO09A\0000
+    Class                : Ports
+    Driver KeyName       : {4d36e978-e325-11ce-bfc1-08002be10318}\0003 (GUID_DEVCLASS_PORTS)
+    Service              : FTSER2K
+    COM-Port             : COM7 (\Device\VCP0)
+ Child Device 2          : USB Serial Converter B
+  Device Path            : \\?\USB#VID_0403&PID_6010&MI_01#6&2e41fb96&0&0001#{219d0508-57a8-4ff5-97a1-bd86587c6c7e}
+  Kernel Name            : \Device\00000177
+  Device ID              : USB\VID_0403&PID_6010&MI_01\6&2E41FB96&0&0001
+  Class                  : USB
+  Driver KeyName         : {36fc9e60-c465-11cf-8056-444553540000}\0024 (GUID_DEVCLASS_USB)
+  Service                : FTDIBUS
+  Location               : 0000.0014.0000.009.000.000.000.000.000
+  LocationPaths          : PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(9)#USBMI(1)  ACPI(_SB_)#ACPI(PC00)#ACPI(XHCI)#ACPI(RHUB)#ACPI(HS09)#USBMI(1)
+   Child Device 1        : USB Serial Port (COM8)
+    Device Path 1        : \\?\FTDIBUS#VID_0403+PID_6010+FT79WO09B#0000#{86e0d1e0-8089-11d0-9ce4-08003e301f73} (GUID_DEVINTERFACE_COMPORT)
+    Device Path 2        : \\?\FTDIBUS#VID_0403+PID_6010+FT79WO09B#0000#{4d36e978-e325-11ce-bfc1-08002be10318} (GUID_DEVINTERFACE_SERENUM_BUS_ENUMERATOR)
+    Kernel Name          : \Device\0000017b
+    Device ID            : FTDIBUS\VID_0403+PID_6010+FT79WO09B\0000
+    Class                : Ports
+    Driver KeyName       : {4d36e978-e325-11ce-bfc1-08002be10318}\0005 (GUID_DEVCLASS_PORTS)
+    Service              : FTSER2K
+    COM-Port             : COM8 (\Device\VCP1)
+
+        +++++++++++++++++ Registry USB Flags +++++++++++++++++
+HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\040360100700
+ osvc                    : REG_BINARY 00 00
+
+        ---------------- Connection Information ---------------
+Connection Index         : 0x09 (Port 9)
+Connection Status        : 0x01 (DeviceConnected)
+Current Config Value     : 0x01 (Configuration 1)
+Device Address           : 0x0C (12)
+Is Hub                   : 0x00 (no)
+Device Bus Speed         : 0x02 (High-Speed)
+Number Of Open Pipes     : 0x04 (4 pipes to data endpoints)
+Pipe[0]                  : EndpointID=1  Direction=IN   ScheduleOffset=0  Type=Bulk  wMaxPacketSize=512  bInterval=0
+Pipe[1]                  : EndpointID=2  Direction=OUT  ScheduleOffset=0  Type=Bulk  wMaxPacketSize=512  bInterval=0
+Pipe[2]                  : EndpointID=3  Direction=IN   ScheduleOffset=0  Type=Bulk  wMaxPacketSize=512  bInterval=0
+Pipe[3]                  : EndpointID=4  Direction=OUT  ScheduleOffset=0  Type=Bulk  wMaxPacketSize=512  bInterval=0
+Data (HexDump)           : 09 00 00 00 12 01 00 02 00 00 00 40 03 04 10 60   ...........@...`
+                           00 07 01 02 03 01 01 02 00 0C 00 04 00 00 00 01   ................
+                           00 00 00 07 05 81 02 00 02 00 00 00 00 00 07 05   ................
+                           02 02 00 02 00 00 00 00 00 07 05 83 02 00 02 00   ................
+                           00 00 00 00 07 05 04 02 00 02 00 00 00 00 00      ...............
+
+        --------------- Connection Information V2 -------------
+Connection Index         : 0x09 (9)
+Length                   : 0x10 (16 bytes)
+SupportedUsbProtocols    : 0x03
+ Usb110                  : 1 (yes, port supports USB 1.1)
+ Usb200                  : 1 (yes, port supports USB 2.0)
+ Usb300                  : 0 (no, port not supports USB 3.0) -> but Companion Port 2-24 does
+ ReservedMBZ             : 0x00
+Flags                    : 0x00
+ DevIsOpAtSsOrHigher     : 0 (Device is not operating at SuperSpeed or higher)
+ DevIsSsCapOrHigher      : 0 (Device is not SuperSpeed capable or higher)
+ DevIsOpAtSsPlusOrHigher : 0 (Device is not operating at SuperSpeedPlus or higher)
+ DevIsSsPlusCapOrHigher  : 0 (Device is not SuperSpeedPlus capable or higher)
+ ReservedMBZ             : 0x00
+Data (HexDump)           : 09 00 00 00 10 00 00 00 03 00 00 00 00 00 00 00   ................
+
+    ---------------------- Device Descriptor ----------------------
+bLength                  : 0x12 (18 bytes)
+bDescriptorType          : 0x01 (Device Descriptor)
+bcdUSB                   : 0x200 (USB Version 2.00)
+bDeviceClass             : 0x00 (defined by the interface descriptors)
+bDeviceSubClass          : 0x00
+bDeviceProtocol          : 0x00
+bMaxPacketSize0          : 0x40 (64 bytes)
+idVendor                 : 0x0403 (Future Technology Devices International Limited)
+idProduct                : 0x6010
+bcdDevice                : 0x0700
+iManufacturer            : 0x01 (String Descriptor 1)
+ Language 0x0409         : "FTDI"
+iProduct                 : 0x02 (String Descriptor 2)
+ Language 0x0409         : "USB Serial Converter"
+iSerialNumber            : 0x03 (String Descriptor 3)
+ Language 0x0409         : "FT79WO09"
+bNumConfigurations       : 0x01 (1 Configuration)
+Data (HexDump)           : 12 01 00 02 00 00 00 40 03 04 10 60 00 07 01 02   .......@...`....
+                           03 01                                             ..
+
+    ------------------ Configuration Descriptor -------------------
+bLength                  : 0x09 (9 bytes)
+bDescriptorType          : 0x02 (Configuration Descriptor)
+wTotalLength             : 0x0037 (55 bytes)
+bNumInterfaces           : 0x02 (2 Interfaces)
+bConfigurationValue      : 0x01 (Configuration 1)
+iConfiguration           : 0x00 (No String Descriptor)
+bmAttributes             : 0x80
+ D7: Reserved, set 1     : 0x01
+ D6: Self Powered        : 0x00 (no)
+ D5: Remote Wakeup       : 0x00 (no)
+ D4..0: Reserved, set 0  : 0x00
+MaxPower                 : 0x32 (100 mA)
+Data (HexDump)           : 09 02 37 00 02 01 00 80 32 09 04 00 00 02 FF FF   ..7.....2.......
+                           FF 02 07 05 81 02 00 02 00 07 05 02 02 00 02 00   ................
+                           09 04 01 00 02 FF FF FF 02 07 05 83 02 00 02 00   ................
+                           07 05 04 02 00 02 00                              .......
+
+        ---------------- Interface Descriptor -----------------
+bLength                  : 0x09 (9 bytes)
+bDescriptorType          : 0x04 (Interface Descriptor)
+bInterfaceNumber         : 0x00 (Interface 0)
+bAlternateSetting        : 0x00
+bNumEndpoints            : 0x02 (2 Endpoints)
+bInterfaceClass          : 0xFF (Vendor Specific)
+bInterfaceSubClass       : 0xFF
+bInterfaceProtocol       : 0xFF
+iInterface               : 0x02 (String Descriptor 2)
+ Language 0x0409         : "USB Serial Converter"
+Data (HexDump)           : 09 04 00 00 02 FF FF FF 02                        .........
+
+        ----------------- Endpoint Descriptor -----------------
+bLength                  : 0x07 (7 bytes)
+bDescriptorType          : 0x05 (Endpoint Descriptor)
+bEndpointAddress         : 0x81 (Direction=IN EndpointID=1)
+bmAttributes             : 0x02 (TransferType=Bulk)
+wMaxPacketSize           : 0x0200 (max 512 bytes)
+bInterval                : 0x00 (never NAKs)
+Data (HexDump)           : 07 05 81 02 00 02 00                              .......
+
+        ----------------- Endpoint Descriptor -----------------
+bLength                  : 0x07 (7 bytes)
+bDescriptorType          : 0x05 (Endpoint Descriptor)
+bEndpointAddress         : 0x02 (Direction=OUT EndpointID=2)
+bmAttributes             : 0x02 (TransferType=Bulk)
+wMaxPacketSize           : 0x0200 (max 512 bytes)
+bInterval                : 0x00 (never NAKs)
+Data (HexDump)           : 07 05 02 02 00 02 00                              .......
+
+        ---------------- Interface Descriptor -----------------
+bLength                  : 0x09 (9 bytes)
+bDescriptorType          : 0x04 (Interface Descriptor)
+bInterfaceNumber         : 0x01 (Interface 1)
+bAlternateSetting        : 0x00
+bNumEndpoints            : 0x02 (2 Endpoints)
+bInterfaceClass          : 0xFF (Vendor Specific)
+bInterfaceSubClass       : 0xFF
+bInterfaceProtocol       : 0xFF
+iInterface               : 0x02 (String Descriptor 2)
+ Language 0x0409         : "USB Serial Converter"
+Data (HexDump)           : 09 04 01 00 02 FF FF FF 02                        .........
+
+        ----------------- Endpoint Descriptor -----------------
+bLength                  : 0x07 (7 bytes)
+bDescriptorType          : 0x05 (Endpoint Descriptor)
+bEndpointAddress         : 0x83 (Direction=IN EndpointID=3)
+bmAttributes             : 0x02 (TransferType=Bulk)
+wMaxPacketSize           : 0x0200 (max 512 bytes)
+bInterval                : 0x00 (never NAKs)
+Data (HexDump)           : 07 05 83 02 00 02 00                              .......
+
+        ----------------- Endpoint Descriptor -----------------
+bLength                  : 0x07 (7 bytes)
+bDescriptorType          : 0x05 (Endpoint Descriptor)
+bEndpointAddress         : 0x04 (Direction=OUT EndpointID=4)
+bmAttributes             : 0x02 (TransferType=Bulk)
+wMaxPacketSize           : 0x0200 (max 512 bytes)
+bInterval                : 0x00 (never NAKs)
+Data (HexDump)           : 07 05 04 02 00 02 00                              .......
+
+    --------- Device Qualifier Descriptor (for Full-Speed) --------
+bLength                  : 0x0A (10 bytes)
+bDescriptorType          : 0x06 (Device_qualifier Descriptor)
+bcdUSB                   : 0x200 (USB Version 2.00)
+bDeviceClass             : 0x00 (defined by the interface descriptors)
+bDeviceSubClass          : 0x00
+bDeviceProtocol          : 0x00
+bMaxPacketSize0          : 0x40 (64 Bytes)
+bNumConfigurations       : 0x01 (1 other-speed configuration)
+bReserved                : 0x00
+Data (HexDump)           : 0A 06 00 02 00 00 00 40 01 00                     .......@..
+
+    ------------ Other Speed Configuration Descriptor -------------
+bLength                  : 0x09 (9 bytes)
+bDescriptorType          : 0x07 (Other_speed_configuration Descriptor)
+wTotalLength             : 0x0037 (55 bytes)
+bNumInterfaces           : 0x02 (2 Interfaces)
+bConfigurationValue      : 0x01 (Configuration 1)
+iConfiguration           : 0x00 (No String Descriptor)
+bmAttributes             : 0x80
+ D7: Reserved, set 1     : 0x01
+ D6: Self Powered        : 0x00 (no)
+ D5: Remote Wakeup       : 0x00 (no)
+ D4..0: Reserved, set 0  : 0x00
+MaxPower                 : 0x32 (100 mA)
+Data (HexDump)           : 09 07 37 00 02 01 00 80 32 09 04 00 00 02 FF FF   ..7.....2.......
+                           FF 02 07 05 81 02 40 00 00 07 05 02 02 40 00 00   ......@......@..
+                           09 04 01 00 02 FF FF FF 02 07 05 83 02 40 00 00   .............@..
+                           07 05 04 02 40 00 00                              ....@..
+
+        ---------------- Interface Descriptor -----------------
+bLength                  : 0x09 (9 bytes)
+bDescriptorType          : 0x04 (Interface Descriptor)
+bInterfaceNumber         : 0x00 (Interface 0)
+bAlternateSetting        : 0x00
+bNumEndpoints            : 0x02 (2 Endpoints)
+bInterfaceClass          : 0xFF (Vendor Specific)
+bInterfaceSubClass       : 0xFF
+bInterfaceProtocol       : 0xFF
+iInterface               : 0x02 (String Descriptor 2)
+ Language 0x0409         : "USB Serial Converter"
+Data (HexDump)           : 09 04 00 00 02 FF FF FF 02                        .........
+
+        ----------------- Endpoint Descriptor -----------------
+bLength                  : 0x07 (7 bytes)
+bDescriptorType          : 0x05 (Endpoint Descriptor)
+bEndpointAddress         : 0x81 (Direction=IN EndpointID=1)
+bmAttributes             : 0x02 (TransferType=Bulk)
+wMaxPacketSize           : 0x0040 (64 bytes)
+bInterval                : 0x00 (ignored)
+Data (HexDump)           : 07 05 81 02 40 00 00                              ....@..
+
+        ----------------- Endpoint Descriptor -----------------
+bLength                  : 0x07 (7 bytes)
+bDescriptorType          : 0x05 (Endpoint Descriptor)
+bEndpointAddress         : 0x02 (Direction=OUT EndpointID=2)
+bmAttributes             : 0x02 (TransferType=Bulk)
+wMaxPacketSize           : 0x0040 (64 bytes)
+bInterval                : 0x00 (ignored)
+Data (HexDump)           : 07 05 02 02 40 00 00                              ....@..
+
+        ---------------- Interface Descriptor -----------------
+bLength                  : 0x09 (9 bytes)
+bDescriptorType          : 0x04 (Interface Descriptor)
+bInterfaceNumber         : 0x01 (Interface 1)
+bAlternateSetting        : 0x00
+bNumEndpoints            : 0x02 (2 Endpoints)
+bInterfaceClass          : 0xFF (Vendor Specific)
+bInterfaceSubClass       : 0xFF
+bInterfaceProtocol       : 0xFF
+iInterface               : 0x02 (String Descriptor 2)
+ Language 0x0409         : "USB Serial Converter"
+Data (HexDump)           : 09 04 01 00 02 FF FF FF 02                        .........
+
+        ----------------- Endpoint Descriptor -----------------
+bLength                  : 0x07 (7 bytes)
+bDescriptorType          : 0x05 (Endpoint Descriptor)
+bEndpointAddress         : 0x83 (Direction=IN EndpointID=3)
+bmAttributes             : 0x02 (TransferType=Bulk)
+wMaxPacketSize           : 0x0040 (64 bytes)
+bInterval                : 0x00 (ignored)
+Data (HexDump)           : 07 05 83 02 40 00 00                              ....@..
+
+        ----------------- Endpoint Descriptor -----------------
+bLength                  : 0x07 (7 bytes)
+bDescriptorType          : 0x05 (Endpoint Descriptor)
+bEndpointAddress         : 0x04 (Direction=OUT EndpointID=4)
+bmAttributes             : 0x02 (TransferType=Bulk)
+wMaxPacketSize           : 0x0040 (64 bytes)
+bInterval                : 0x00 (ignored)
+Data (HexDump)           : 07 05 04 02 40 00 00                              ....@..
+
+      -------------------- String Descriptors -------------------
+             ------ String Descriptor 0 ------
+bLength                  : 0x04 (4 bytes)
+bDescriptorType          : 0x03 (String Descriptor)
+Language ID[0]           : 0x0409 (English - United States)
+Data (HexDump)           : 04 03 09 04                                       ....
+             ------ String Descriptor 1 ------
+bLength                  : 0x0A (10 bytes)
+bDescriptorType          : 0x03 (String Descriptor)
+Language 0x0409          : "FTDI"
+Data (HexDump)           : 0A 03 46 00 54 00 44 00 49 00                     ..F.T.D.I.
+             ------ String Descriptor 2 ------
+bLength                  : 0x2A (42 bytes)
+bDescriptorType          : 0x03 (String Descriptor)
+Language 0x0409          : "USB Serial Converter"
+Data (HexDump)           : 2A 03 55 00 53 00 42 00 20 00 53 00 65 00 72 00   *.U.S.B. .S.e.r.
+                           69 00 61 00 6C 00 20 00 43 00 6F 00 6E 00 76 00   i.a.l. .C.o.n.v.
+                           65 00 72 00 74 00 65 00 72 00                     e.r.t.e.r.
+             ------ String Descriptor 3 ------
+bLength                  : 0x12 (18 bytes)
+bDescriptorType          : 0x03 (String Descriptor)
+Language 0x0409          : "FT123456"
+Data (HexDump)           : 12 03 46 00 54 00 31 00 32 00 33 00 34 00 35 00   ..F.T.1.2.3.4.5.
+                           36 00                                             6.
