@@ -9,30 +9,27 @@ logging.getLogger("pyftdi.d2xx").setLevel(logging.DEBUG)
 
 os.environ["BLINKA_FT232H"] = "1"
 
+logging.getLogger("pyftdi.ftdi").setLevel(logging.DEBUG)
+logging.getLogger("pyftdi.d2xx").setLevel(logging.DEBUG)
+
 import board
 import digitalio
-import adafruit_bme680
-from adafruit_blinka.microcontroller.ftdi_mpsse.mpsse.pin import Pin
 
-leds = []
-for i in range(4, 16):
-    led = digitalio.DigitalInOut(Pin(i))
+pins = (
+    board.AD0, board.AD1, board.AD2, board.AD3, board.AD4, board.AD5, board.AD6, board.AD7,
+    board.AC0, board.AC1, board.AC2, board.AC3, board.AC4, board.AC5, board.AC6, board.AC7,
+)
+
+leds = [digitalio.DigitalInOut(pin) for pin in pins]
+
+for led in leds:
     led.direction = digitalio.Direction.OUTPUT
-    leds.append(led)
-
-i2c = board.I2C()
-bme680 = adafruit_bme680.Adafruit_BME680_I2C(i2c, refresh_rate=1)
-
-logger.setLevel(logging.INFO)
 
 index = 0
 inc = 1
 while True:
     leds[index].value = 1
-
-    print(f"Temperature: {bme680.temperature:0.1f}C, Humidity: {bme680.relative_humidity:0.1f}%")
-    time.sleep(1)
-
+    time.sleep(0.1)
     leds[index].value = 0
     if index == len(leds) - 1:
         inc = -1

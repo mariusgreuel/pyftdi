@@ -135,6 +135,8 @@ FT_DEVICE_2232HA = 23
 FT_DEVICE_4232HA = 24
 FT_DEVICE_232RN = 25
 
+FT_FLAGS_OPENED = 1
+
 FT_OPEN_BY_SERIAL_NUMBER = 1
 
 FT_EVENT_RXCHAR = 1
@@ -443,10 +445,11 @@ def _load_imports():
 
 
 class _Handle:
-    def __init__(self, dev, handle, rx_event):
-        self.dev = dev
-        self.handle = handle
-        self.rx_event = rx_event
+    def __init__(self):
+        self.dev = None
+        self.handle = None
+        self.rx_event = None
+        self.available = False
         self.event_char = 0
         self.event_char_enabled = 0
         self.error_char = 0
@@ -455,17 +458,18 @@ class _Handle:
 
 class _Device:
     def __init__(
-        self, flags, dev_type, dev_id, loc_id, handle, serial_number, description
+        self, flags, dev_type, dev_id, loc_id, ft_handle, serial_number, description
     ):
         self.flags = flags
         self.dev_type = dev_type
         self.dev_id = dev_id
         self.loc_id = loc_id
-        self.handle = handle
+        self.ft_handle = ft_handle
         self.serial_number = serial_number
         self.description = description
         self.num_interfaces = self._get_num_interfaces(dev_type)
-        self.available_interfaces = 0
+        self.default_interface = 0
+        self.interface_handles = [_Handle() for _ in range(self.num_interfaces)]
 
     def _get_num_interfaces(self, dev_type):
         if dev_type in (
@@ -571,7 +575,7 @@ class _D2xx(usb.backend.IBackend):
         for index in range(num_devs):
             lpSerialNumber = create_string_buffer(16)
             lpDescription = create_string_buffer(64)
-            flags, dev_type, dev_id, loc_id, handle = FT_GetDeviceInfoDetail(
+            flags, dev_type, dev_id, loc_id, ft_handle = FT_GetDeviceInfoDetail(
                 index, lpSerialNumber, lpDescription
             )
             serial_number = lpSerialNumber.value.decode("cp1252")
@@ -586,46 +590,35 @@ class _D2xx(usb.backend.IBackend):
             )
 
             device = _Device(
-                flags, dev_type, dev_id, loc_id, handle, serial_number, description
+                flags, dev_type, dev_id, loc_id, ft_handle, serial_number, description
             )
 
-            if self._has_multiple_interfaces(dev_type):
-                if len(device.serial_number) > 0:
-                    interface = ord(device.serial_number[-1]) - ord("A")
-                    if interface >= 0 and interface <= 4:
-                        device.available_interfaces |= 1 << interface
-                        device.serial_number = device.serial_number[:-1]
-                        device.description = device.description[:-1].rstrip()
+            if len(device.interface_handles) > 1:
+                interface = ord(device.serial_number[-1]) - ord("A")
+                assert interface >= 0 and interface < len(device.interface_handles)
+                device.default_interface = interface
+                device.interface_handles[interface].available = True
+                device.serial_number = device.serial_number[:-1]
+                device.description = device.description[:-1].rstrip()
 
-            if flags & 1 == 0:
-                for d in devices:
-                    if d.serial_number == device.serial_number:
-                        d.available_interfaces |= device.available_interfaces
+            if not flags & FT_FLAGS_OPENED:
+                for existing_device in devices:
+                    if existing_device.serial_number == device.serial_number:
+                        existing_device.interface_handles[
+                            device.default_interface
+                        ].available = True
                         break
                 else:
                     devices.append(device)
 
         return devices
 
-    def _has_multiple_interfaces(self, dev_type):
-        return dev_type in (
-            FT_DEVICE_2232C,
-            FT_DEVICE_2232H,
-            FT_DEVICE_2232HA,
-            FT_DEVICE_2232HP,
-            FT_DEVICE_2233HP,
-            FT_DEVICE_4232H,
-            FT_DEVICE_4232HA,
-            FT_DEVICE_4232HP,
-            FT_DEVICE_4233HP,
-        )
-
     def get_device_descriptor(self, dev):
-        _logger.debug("get_device_descriptor")
+        _logger.info("get_device_descriptor")
         return _DeviceDescriptor(dev)
 
     def get_configuration_descriptor(self, dev, config):
-        _logger.debug("get_configuration_descriptor: config=%s", config)
+        _logger.info("get_configuration_descriptor: config=%s", config)
 
         if config >= 1:
             raise IndexError("Invalid configuration index " + str(config))
@@ -633,7 +626,7 @@ class _D2xx(usb.backend.IBackend):
         return _ConfigurationDescriptor(dev)
 
     def get_interface_descriptor(self, dev, intf, alt, config):
-        _logger.debug(
+        _logger.info(
             "get_interface_descriptor: intf=%s, alt=%s, config=%s", intf, alt, config
         )
 
@@ -647,7 +640,7 @@ class _D2xx(usb.backend.IBackend):
         return _InterfaceDescriptor(intf)
 
     def get_endpoint_descriptor(self, dev, ep, intf, alt, config):
-        _logger.debug(
+        _logger.info(
             "get_endpoint_descriptor: ep=%s, intf=%s, alt=%s, config=%s",
             ep,
             intf,
@@ -665,72 +658,82 @@ class _D2xx(usb.backend.IBackend):
             raise IndexError("Invalid alternate setting index " + str(alt))
 
         if ep == 0:
-            return _EndpointDescriptor(0x81)
-
-        return _EndpointDescriptor(0x02)
+            return _EndpointDescriptor(0x80 | intf * 2 + 1)
+        else:
+            return _EndpointDescriptor(intf * 2 + 2)
 
     def open_device(self, dev):
-        _logger.debug("open_device: serial_number=%s", dev.serial_number)
+        _logger.info("open_device: serial_number=%s", dev.serial_number)
 
-        serial_number = dev.serial_number + "A"
-
-        handle = FT_OpenEx(serial_number.encode("cp1252"), FT_OPEN_BY_SERIAL_NUMBER)
-        version = FT_GetDriverVersion(handle)
+        interface_handle = self._open_device_interface(dev, dev.default_interface)
+        version = FT_GetDriverVersion(interface_handle.handle)
         _logger.info(
             "FTDI Driver V%X.%X.%X",
             (version >> 16) & 0xFF,
             (version >> 8) & 0xFF,
             version & 0xFF,
         )
-        rx_event = CreateEventW(None, 0, 0, None)
-        FT_SetTimeouts(handle, 5000, 1000)
-        FT_SetEventNotification(handle, FT_EVENT_RXCHAR, rx_event)
-        return _Handle(dev, handle, rx_event)
+
+        interface_handle.rx_event = CreateEventW(None, 0, 0, None)
+        FT_SetTimeouts(interface_handle.handle, 5000, 1000)
+        FT_SetEventNotification(
+            interface_handle.handle, FT_EVENT_RXCHAR, interface_handle.rx_event
+        )
+        return interface_handle
 
     def close_device(self, dev_handle):
-        _logger.debug("close_device")
-        FT_Close(dev_handle.handle)
+        _logger.info("close_device")
+        for interface_handle in dev_handle.dev.interface_handles:
+            self._close_device_interface(interface_handle)
 
     def set_configuration(self, dev_handle, config_value):
-        _logger.debug("set_configuration: config_value=%s", config_value)
+        _logger.info("set_configuration: config_value=%s", config_value)
 
     def get_configuration(self, dev_handle):
-        _logger.debug("get_configuration")
+        _logger.info("get_configuration")
         return 1
 
     def claim_interface(self, dev_handle, intf):
-        _logger.debug("claim_interface: intf=%s", intf)
+        _logger.info("claim_interface: intf=%s", intf)
+        interface_handle = dev_handle.dev.interface_handles[intf]
+        if interface_handle.handle is None:
+            self._open_device_interface(dev_handle.dev, intf)
 
     def release_interface(self, dev_handle, intf):
-        _logger.debug("release_interface: intf=%s", intf)
+        _logger.info("release_interface: intf=%s", intf)
+        interface_handle = dev_handle.dev.interface_handles[intf]
+        if not interface_handle.handle is None:
+            self._close_device_interface(interface_handle)
 
     def bulk_write(self, dev_handle, ep, intf, data, timeout):
-        _logger.debug(
+        _logger.info(
             "bulk_write: ep=%s, intf=%s, len=%s, timeout=%s",
             ep,
             intf,
             len(data),
             timeout,
         )
+        interface_handle = dev_handle.dev.interface_handles[intf]
         c_data = (c_ubyte * len(data)).from_buffer(data)
-        return FT_Write(dev_handle.handle, c_data, len(data))
+        return FT_Write(interface_handle.handle, c_data, len(data))
 
     def bulk_read(self, dev_handle, ep, intf, buff, timeout):
-        _logger.debug(
+        _logger.info(
             "bulk_read: ep=%s, intf=%s, len=%s, timeout=%s",
             ep,
             intf,
             len(buff),
             timeout,
         )
+        interface_handle = dev_handle.dev.interface_handles[intf]
         if len(buff) < 2:
             return 0
 
-        status = WaitForSingleObject(dev_handle.rx_event, 10)
+        status = WaitForSingleObject(interface_handle.rx_event, 10)
         if status != 0:
             return 0
 
-        rx_bytes = FT_GetQueueStatus(dev_handle.handle)
+        rx_bytes = FT_GetQueueStatus(interface_handle.handle)
         if rx_bytes == 0:
             return 0
 
@@ -742,14 +745,14 @@ class _D2xx(usb.backend.IBackend):
 
         c_buff = (c_ubyte * len(buff)).from_buffer(buff)
         bytes_returned = FT_Read(
-            dev_handle.handle, cast(byref(c_buff, 2), POINTER(c_ubyte)), rx_bytes
+            interface_handle.handle, cast(byref(c_buff, 2), POINTER(c_ubyte)), rx_bytes
         )
         return bytes_returned + 2
 
     def ctrl_transfer(
         self, dev_handle, bmRequestType, bRequest, wValue, wIndex, data, timeout
     ):
-        _logger.debug(
+        _logger.info(
             "ctrl_transfer: bmRequestType=0x%02X, bRequest=0x%02X, wValue=0x%04X, wIndex=0x%04X",
             bmRequestType,
             bRequest,
@@ -806,31 +809,35 @@ class _D2xx(usb.backend.IBackend):
         self, dev_handle, bmRequestType, bRequest, wValue, wIndex, data
     ):
         if bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_RESET:
+            interface_handle = self._get_interface_handle(dev_handle, wIndex)
             if wValue == Ftdi.SIO_RESET_SIO:
-                FT_ResetDevice(dev_handle.handle)
+                FT_ResetDevice(interface_handle.handle)
                 return 0
             if wValue == Ftdi.SIO_RESET_PURGE_RX:
-                FT_Purge(dev_handle.handle, FT_PURGE_RX)
+                FT_Purge(interface_handle.handle, FT_PURGE_RX)
                 return 0
             if wValue == Ftdi.SIO_RESET_PURGE_TX:
-                FT_Purge(dev_handle.handle, FT_PURGE_TX)
+                FT_Purge(interface_handle.handle, FT_PURGE_TX)
                 return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_MODEM_CTRL:
+            interface_handle = self._get_interface_handle(dev_handle, wIndex)
             if wValue & 0x0100:
                 if wValue & 0x01:
-                    FT_SetDtr(dev_handle.handle)
+                    FT_SetDtr(interface_handle.handle)
                 else:
-                    FT_ClrDtr(dev_handle.handle)
+                    FT_ClrDtr(interface_handle.handle)
             if wValue & 0x0200:
                 if wValue & 0x02:
-                    FT_SetRts(dev_handle.handle)
+                    FT_SetRts(interface_handle.handle)
                 else:
-                    FT_ClrRts(dev_handle.handle)
+                    FT_ClrRts(interface_handle.handle)
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_FLOW_CTRL:
-            FT_SetFlowControl(dev_handle.handle, wIndex & 0xFF00, 0x11, 0x13)
+            interface_handle = self._get_interface_handle(dev_handle, wIndex)
+            FT_SetFlowControl(interface_handle.handle, wIndex & 0xFF00, 0x11, 0x13)
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_BAUDRATE:
+            interface_handle = self._get_interface_handle(dev_handle, wIndex)
             # TODO
             divisor = wValue & 0x3FFF
             subdivisor = (wValue >> 14) & 3
@@ -839,63 +846,73 @@ class _D2xx(usb.backend.IBackend):
             elif self._is_h_type(dev_handle.dev.dev_type):
                 subdivisor |= (wIndex & 0x100) >> 6
             clock = 12_000_000 if (wIndex >> 9) & 1 else 3_000_000
-            FT_SetBaudRate(dev_handle.handle, 0)
+            FT_SetBaudRate(interface_handle.handle, 0)
             # return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_DATA:
+            interface_handle = self._get_interface_handle(dev_handle, wIndex)
             word_length = wValue & 0xF
             parity = (wValue >> 8) & 0x7
             stop_bits = (wValue >> 11) & 0x3
             line_break = (wValue >> 14) & 0x1
-            FT_SetDataCharacteristics(dev_handle.handle, word_length, stop_bits, parity)
+            FT_SetDataCharacteristics(
+                interface_handle.handle, word_length, stop_bits, parity
+            )
             if line_break:
-                FT_SetBreakOn(dev_handle.handle)
+                FT_SetBreakOn(interface_handle.handle)
             else:
-                FT_SetBreakOff(dev_handle.handle)
+                FT_SetBreakOff(interface_handle.handle)
             return 0
         elif (
             bmRequestType & 0x80 == 0x80 and bRequest == Ftdi.SIO_REQ_POLL_MODEM_STATUS
         ):
-            status = FT_GetModemStatus(dev_handle.handle)
+            interface_handle = self._get_interface_handle(dev_handle, wIndex)
+            status = FT_GetModemStatus(interface_handle.handle)
             data[0] = status & 0xFF
             data[1] = (status >> 8) & 0xFF
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_EVENT_CHAR:
-            dev_handle.event_char = wValue & 0xFF
-            dev_handle.event_char_enabled = (wValue >> 8) & 0xFF
+            interface_handle = self._get_interface_handle(dev_handle, wIndex)
+            interface_handle.event_char = wValue & 0xFF
+            interface_handle.event_char_enabled = (wValue >> 8) & 0xFF
             FT_SetChars(
-                dev_handle.handle,
-                dev_handle.event_char,
-                dev_handle.event_char_enabled,
-                dev_handle.error_char,
-                dev_handle.error_char_enabled,
+                interface_handle.handle,
+                interface_handle.event_char,
+                interface_handle.event_char_enabled,
+                interface_handle.error_char,
+                interface_handle.error_char_enabled,
             )
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_ERROR_CHAR:
-            dev_handle.error_char = wValue & 0xFF
-            dev_handle.error_char_enabled = (wValue >> 8) & 0xFF
+            interface_handle = self._get_interface_handle(dev_handle, wIndex)
+            interface_handle.error_char = wValue & 0xFF
+            interface_handle.error_char_enabled = (wValue >> 8) & 0xFF
             FT_SetChars(
-                dev_handle.handle,
-                dev_handle.event_char,
-                dev_handle.event_char_enabled,
-                dev_handle.error_char,
-                dev_handle.error_char_enabled,
+                interface_handle.handle,
+                interface_handle.event_char,
+                interface_handle.event_char_enabled,
+                interface_handle.error_char,
+                interface_handle.error_char_enabled,
             )
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_LATENCY_TIMER:
-            FT_SetLatencyTimer(dev_handle.handle, wValue)
+            interface_handle = self._get_interface_handle(dev_handle, wIndex)
+            FT_SetLatencyTimer(interface_handle.handle, wValue)
             return 0
         elif (
             bmRequestType & 0x80 == 0x80 and bRequest == Ftdi.SIO_REQ_GET_LATENCY_TIMER
         ):
-            data[0] = FT_GetLatencyTimer(dev_handle.handle)
+            interface_handle = self._get_interface_handle(dev_handle, wIndex)
+            data[0] = FT_GetLatencyTimer(interface_handle.handle)
             return 0
         elif bRequest == Ftdi.SIO_REQ_SET_BITMODE:
+            interface_handle = self._get_interface_handle(dev_handle, wIndex)
             mode = (wValue >> 8) & 0xFF
             mask = wValue & 0xFF
-            FT_SetBitMode(dev_handle.handle, mask, mode)
+            FT_SetBitMode(interface_handle.handle, mask, mode)
             return 0
         elif bmRequestType & 0x80 == 0x80 and bRequest == Ftdi.SIO_REQ_READ_PINS:
-            data[0] = FT_GetBitMode(dev_handle.handle)
+            interface_handle = self._get_interface_handle(dev_handle, wIndex)
+            data[0] = FT_GetBitMode(interface_handle.handle)
             return 0
         elif bmRequestType & 0x80 == 0x80 and bRequest == Ftdi.SIO_REQ_READ_EEPROM:
             if len(data) < 2:
@@ -913,6 +930,31 @@ class _D2xx(usb.backend.IBackend):
             return 0
 
         raise USBError("Not implemented")
+
+    def _get_interface_handle(self, dev_handle, wIndex):
+        interface = wIndex - 1
+        interface_handle = dev_handle.dev.interface_handles[interface]
+        if interface_handle.handle is None:
+            self._open_device_interface(dev_handle.dev, interface)
+
+        return interface_handle
+
+    def _open_device_interface(self, dev, interface):
+        serial_number = dev.serial_number
+        if len(dev.interface_handles) > 1:
+            serial_number += chr(ord("A") + interface)
+
+        interface_handle = dev.interface_handles[interface]
+        interface_handle.dev = dev
+        interface_handle.handle = FT_OpenEx(
+            serial_number.encode("cp1252"), FT_OPEN_BY_SERIAL_NUMBER
+        )
+        return interface_handle
+
+    def _close_device_interface(self, interface_handle):
+        if not interface_handle.handle is None:
+            FT_Close(interface_handle.handle)
+            interface_handle.handle = None
 
     def _is_r_type(self, dev_type):
         return dev_type in (

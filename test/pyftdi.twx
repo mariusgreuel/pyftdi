@@ -7,16 +7,26 @@
         <Provider Name="pyetw.test" Guid="433AB0BA-281E-5E11-B698-383612F6BEF6" Enabled="true"/>
         <Provider Name="pyftdi.d2xx" Guid="275EB497-C222-5894-63CC-5C17B3066657" Enabled="true"/>
         <Provider Name="pyftdi.ftdi" Guid="12F5A380-876F-5D7B-99A5-8DAA1D1B53F1" Enabled="true"/>
+        <Provider Name="pyetw.demo" Guid="0EBC66A8-0826-5D05-D72C-FC8BE575DFED" Enabled="true"/>
+        <Provider Name="pyetw.loop" Guid="9A43E5BE-7463-5AC1-5BC2-A1B8547346B9" Enabled="true"/>
       </Providers>
     </Session>
     <Filters>
       <Filter2>
         <Rules>
-          <Rule Enabled="true" Column="LevelName" Relation="Is" Value="Verbose" Action="Exclude"/>
+          <Rule Enabled="true" Column="LevelName" Relation="Is" Value="DEBUG" Action="Exclude"/>
         </Rules>
       </Filter2>
     </Filters>
     <Colors>
+      <Color Name="Highlight" Foreground="#000000" Background="#FFCCCC">
+        <Filter>
+          <Rules>
+            <Rule Enabled="true" Column="Message" Relation="Contains" Value="FT_OpenEx" Action="Include"/>
+            <Rule Enabled="true" Column="Message" Relation="Contains" Value="FT_Close" Action="Include"/>
+          </Rules>
+        </Filter>
+      </Color>
       <Color Name="Critical" Foreground="#000000" Background="#AAAAFF">
         <Filter>
           <Rules>

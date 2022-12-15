@@ -1,14 +1,13 @@
 import logging
 import os
 import time
+import pyetw
+
+logging.basicConfig(level=logging.DEBUG, handlers=(pyetw.LoggerHandler(),))
+logging.getLogger("pyftdi.ftdi").setLevel(logging.DEBUG)
+logging.getLogger("pyftdi.d2xx").setLevel(logging.DEBUG)
 
 os.environ["BLINKA_FT232H"] = "1"
-
-logger = logging.getLogger("pyftdi.d2xx")
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-#logger.addHandler(handler)
 
 import board
 import digitalio

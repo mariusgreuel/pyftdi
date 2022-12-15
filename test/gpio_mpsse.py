@@ -1,23 +1,26 @@
 import logging
 import time
+import pyetw
 from pyftdi.gpio import GpioMpsseController
 
-logger = logging.getLogger("pyftdi.d2xx")
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-logger.addHandler(handler)
+logging.basicConfig(level=logging.DEBUG, handlers=(pyetw.LoggerHandler(),))
+logging.getLogger("pyftdi.ftdi").setLevel(logging.DEBUG)
+logging.getLogger("pyftdi.d2xx").setLevel(logging.DEBUG)
 
 gpio = GpioMpsseController()
 gpio.configure("ftdi://::FT*/1", direction=0xFFFF, frequency=10)
 
+pins = 16
+
 index = 0
 inc = 1
 while True:
-    for _ in range(2 * 16 - 2):
+    for _ in range(2 * pins - 2):
         gpio.write(1 << index)
+
         time.sleep(0.1)
-        if index == 15:
+
+        if index == pins - 1:
             inc = -1
         elif index == 0:
             inc = 1
