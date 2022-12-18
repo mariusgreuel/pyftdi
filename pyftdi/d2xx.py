@@ -527,7 +527,7 @@ class _DeviceDescriptor:
         self.bMaxPacketSize0 = 0x40
         self.idVendor = (dev.dev_id >> 16) & 0xFFFF
         self.idProduct = dev.dev_id & 0xFFFF
-        self.bcdDevice = 0x0900
+        self.bcdDevice = self._get_bcd_device(dev.dev_type)
         self.iManufacturer = 0x01
         self.iProduct = 0x02
         self.iSerialNumber = 0x03
@@ -539,6 +539,24 @@ class _DeviceDescriptor:
         self.port_numbers = None
         self.speed = None
 
+    def _get_bcd_device(self, dev_type):
+        if dev_type == FT_DEVICE_AM:
+            return 0x0200
+        if dev_type == FT_DEVICE_BM:
+            return 0x0400
+        if dev_type == FT_DEVICE_2232C:
+            return 0x0500
+        if dev_type == FT_DEVICE_232R:
+            return 0x0600
+        if dev_type in (FT_DEVICE_2232H, FT_DEVICE_2232HA, FT_DEVICE_2232HP, FT_DEVICE_2233HP):
+            return 0x0700
+        if dev_type in (FT_DEVICE_4232H, FT_DEVICE_4232HA, FT_DEVICE_4232HP, FT_DEVICE_4233HP):
+            return 0x0800
+        if dev_type in (FT_DEVICE_232H, FT_DEVICE_232HP, FT_DEVICE_233HP, FT_DEVICE_232RN):
+            return 0x0900
+        if dev_type == FT_DEVICE_X_SERIES:
+            return 0x1000
+        return 0x0900
 
 class _ConfigurationDescriptor:
     def __init__(self, dev):
@@ -592,7 +610,7 @@ class _EndpointDescriptor:
 
 
 class _D2xxError(usb.core.USBError):
-    def __init__(self, strerror, error_code=-1):
+    def __init__(self, strerror, error_code=USB_ERROR_NOT_SUPPORTED):
         _logger.error(strerror)
         usb.core.USBError.__init__(
             self, strerror, error_code, _libusb_errno[error_code]
@@ -614,7 +632,9 @@ class _D2xx(usb.backend.IBackend):
             serial_number = lpSerialNumber.value.decode("cp1252")
             description = lpDescription.value.decode("cp1252")
             _logger.info(
-                "Found device: ID=%04X:%04X, flags=0x%08X, serial_number='%s', description='%s'",
+                "Found device: "
+                "type='%s', ID=%04X:%04X, flags=0x%08X, serial_number='%s', description='%s'",
+                self._friendly_type(dev_type),
                 dev_id & 0xFFFF,
                 (dev_id >> 16) & 0xFFFF,
                 flags,
@@ -884,7 +904,7 @@ class _D2xx(usb.backend.IBackend):
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_BAUDRATE:
             value = wValue
-            if dev_handle.dev.dev_type in (FT_DEVICE_BM, FT_DEVICE_AM, FT_DEVICE_232R):
+            if self._is_legacy_device_type(dev_handle.dev.dev_type):
                 value |= (wIndex & 0xFF) << 16
             else:
                 value |= ((wIndex >> 8) & 0xFF) << 16
@@ -1002,6 +1022,23 @@ class _D2xx(usb.backend.IBackend):
             if bRequest == Ftdi.SIO_REQ_GET_LATENCY_TIMER:
                 return "SIO_REQ_GET_LATENCY_TIMER"
             if bRequest == Ftdi.SIO_REQ_SET_BITMODE:
+                mode = (wValue >> 8) & 0xFF
+                if mode == Ftdi.BitMode.RESET:
+                    return "SIO_REQ_SET_BITMODE(UART)"
+                if mode == Ftdi.BitMode.BITBANG:
+                    return "SIO_REQ_SET_BITMODE(BITBANG)"
+                if mode == Ftdi.BitMode.MPSSE:
+                    return "SIO_REQ_SET_BITMODE(MPSSE)"
+                if mode == Ftdi.BitMode.SYNCBB:
+                    return "SIO_REQ_SET_BITMODE(SYNCBB)"
+                if mode == Ftdi.BitMode.MCU:
+                    return "SIO_REQ_SET_BITMODE(MCU)"
+                if mode == Ftdi.BitMode.OPTO:
+                    return "SIO_REQ_SET_BITMODE(OPTO)"
+                if mode == Ftdi.BitMode.CBUS:
+                    return "SIO_REQ_SET_BITMODE(CBUS)"
+                if mode == Ftdi.BitMode.SYNCFF:
+                    return "SIO_REQ_SET_BITMODE(SYNCFF)"
                 return "SIO_REQ_SET_BITMODE"
             if bRequest == Ftdi.SIO_REQ_READ_PINS:
                 return "SIO_REQ_READ_PINS"
@@ -1035,6 +1072,63 @@ class _D2xx(usb.backend.IBackend):
             FT_Close(interface_handle.handle)
             interface_handle.handle = None
 
+    def _is_legacy_device_type(self, dev_type):
+        return dev_type in (FT_DEVICE_BM, FT_DEVICE_AM, FT_DEVICE_100AX, FT_DEVICE_232R)
+
+    # pylint: disable-next=too-many-branches,too-many-return-statements
+    def _friendly_type(self, dev_type):
+        if dev_type == FT_DEVICE_BM:
+            return "FT232BM"
+        if dev_type == FT_DEVICE_AM:
+            return "FT232AM"
+        if dev_type == FT_DEVICE_100AX:
+            return "FT100AX"
+        if dev_type == FT_DEVICE_2232C:
+            return "FT2232C"
+        if dev_type == FT_DEVICE_232R:
+            return "FT232R"
+        if dev_type == FT_DEVICE_2232H:
+            return "FT2232H"
+        if dev_type == FT_DEVICE_4232H:
+            return "FT4232H"
+        if dev_type == FT_DEVICE_232H:
+            return "FT232H"
+        if dev_type == FT_DEVICE_X_SERIES:
+            return "FTX"
+        if dev_type == FT_DEVICE_4222H_0:
+            return "FT4222H"
+        if dev_type == FT_DEVICE_4222H_1_2:
+            return "FT4222H"
+        if dev_type == FT_DEVICE_4222H_3:
+            return "FT4222H"
+        if dev_type == FT_DEVICE_4222_PROG:
+            return "FT4222"
+        if dev_type == FT_DEVICE_900:
+            return "FT900"
+        if dev_type == FT_DEVICE_930:
+            return "FT930"
+        if dev_type == FT_DEVICE_UMFTPD3A:
+            return "UMFTPD3A"
+        if dev_type == FT_DEVICE_2233HP:
+            return "FT2233HP"
+        if dev_type == FT_DEVICE_4233HP:
+            return "FT4233HP"
+        if dev_type == FT_DEVICE_2232HP:
+            return "FT2232HP"
+        if dev_type == FT_DEVICE_4232HP:
+            return "FT4232HP"
+        if dev_type == FT_DEVICE_233HP:
+            return "FT233HP"
+        if dev_type == FT_DEVICE_232HP:
+            return "FT232HP"
+        if dev_type == FT_DEVICE_2232HA:
+            return "FT2232HA"
+        if dev_type == FT_DEVICE_4232HA:
+            return "FT4232HA"
+        if dev_type == FT_DEVICE_232RN:
+            return "FT232RN"
+        return "UNKNOWN"
+
 
 def get_backend(find_library=None):
     """Get the libusb emulation backend for the FTDI D2XX driver."""
@@ -1049,6 +1143,7 @@ def get_backend(find_library=None):
             return None
 
         return _D2xx()
+    # pylint: disable-next=broad-except
     except Exception:
         _logger.error("Error loading pyftdi.d2xx backend", exc_info=True)
         return None

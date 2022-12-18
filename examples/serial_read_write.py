@@ -9,3 +9,5 @@ logging.getLogger("pyftdi.d2xx").setLevel(logging.DEBUG)
 
 port = pyftdi.serialext.serial_for_url('ftdi://::FT*/1', baudrate=9600)
 port.write(b'Hello World')
+data = port.read(11)
+print("Data: " + str(data))
