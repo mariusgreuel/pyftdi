@@ -884,10 +884,10 @@ class _D2xx(usb.backend.IBackend):
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_BAUDRATE:
             value = wValue
-            if len(dev_handle.dev.interface_handles) > 1:
-                value = (wIndex >> 8) & 0xFF
+            if dev_handle.dev.dev_type in (FT_DEVICE_BM, FT_DEVICE_AM, FT_DEVICE_232R):
+                value |= (wIndex & 0xFF) << 16
             else:
-                value = wIndex & 0xFF
+                value |= ((wIndex >> 8) & 0xFF) << 16
 
             divisor = value & 0x3FFF
             frac_div = FTDI_FRAC_DIV[(value >> 14) & 7]
