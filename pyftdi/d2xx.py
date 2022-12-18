@@ -1,4 +1,6 @@
-# Copyright (C) 2022 Marius Greuel
+# pylint: disable-msg=too-many-lines
+#
+## Copyright (C) 2022 Marius Greuel
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -27,6 +29,7 @@ import usb.core
 import usb.util
 from pyftdi.ftdi import Ftdi
 
+# pylint: disable-msg=missing-function-docstring
 # pylint: disable-msg=invalid-name
 # pylint: disable-msg=global-statement
 # pylint: disable-msg=too-few-public-methods
@@ -146,6 +149,8 @@ FT_EVENT_RXCHAR = 1
 FT_PURGE_RX = 1
 FT_PURGE_TX = 2
 
+FTDI_FRAC_DIV = (0, 4, 2, 1, 3, 5, 6, 7)
+
 ERRORS = {
     FT_OK: "OK",
     FT_INVALID_HANDLE: "Invalid_handle",
@@ -169,14 +174,21 @@ ERRORS = {
     FT_DEVICE_LIST_NOT_READY: "Device list not ready",
 }
 
-LIBUSB_ERROR_INVALID_PARAM = -2
-LIBUSB_ERROR_NO_DEVICE = -4
-LIBUSB_ERROR_NOT_SUPPORTED = -12
+USB_DESC_STRING_LANGUAGEIDS = 0
+USB_DESC_STRING_MANUFACTURER = 1
+USB_DESC_STRING_PRODUCT = 2
+USB_DESC_STRING_SERIALNUMBER = 3
+
+USB_REQUEST_GET_DESCRIPTOR = 0x06
+
+USB_ERROR_INVALID_PARAM = -2
+USB_ERROR_NO_DEVICE = -4
+USB_ERROR_NOT_SUPPORTED = -12
 
 _libusb_errno = {
-    LIBUSB_ERROR_INVALID_PARAM: errno.__dict__.get("EINVAL", None),
-    LIBUSB_ERROR_NO_DEVICE: errno.__dict__.get("ENODEV", None),
-    LIBUSB_ERROR_NOT_SUPPORTED: errno.__dict__.get("ENOSYS", None),
+    USB_ERROR_INVALID_PARAM: errno.__dict__.get("EINVAL", None),
+    USB_ERROR_NO_DEVICE: errno.__dict__.get("ENODEV", None),
+    USB_ERROR_NOT_SUPPORTED: errno.__dict__.get("ENOSYS", None),
 }
 
 
@@ -582,10 +594,13 @@ class _EndpointDescriptor:
 class _D2xxError(usb.core.USBError):
     def __init__(self, strerror, error_code=-1):
         _logger.error(strerror)
-        usb.core.USBError.__init__(self, strerror, error_code, _libusb_errno[error_code])
+        usb.core.USBError.__init__(
+            self, strerror, error_code, _libusb_errno[error_code]
+        )
 
 
 class _D2xx(usb.backend.IBackend):
+    # pylint: disable-next=too-many-locals
     def enumerate_devices(self):
         devices = []
 
@@ -613,7 +628,7 @@ class _D2xx(usb.backend.IBackend):
 
             if len(device.interface_handles) > 1:
                 interface = ord(device.serial_number[-1]) - ord("A")
-                assert interface >= 0 and interface < len(device.interface_handles)
+                assert 0 <= interface < len(device.interface_handles)
                 device.default_interface = interface
                 device.interface_handles[interface].available = True
                 device.serial_number = device.serial_number[:-1]
@@ -678,10 +693,8 @@ class _D2xx(usb.backend.IBackend):
         if alt >= 1:
             raise IndexError("Invalid alternate setting index " + str(alt))
 
-        if ep == 0:
-            return _EndpointDescriptor(0x80 | intf * 2 + 1)
-        else:
-            return _EndpointDescriptor(intf * 2 + 2)
+        endpoint_address = 0x80 | intf * 2 + 1 if ep == 0 else intf * 2 + 2
+        return _EndpointDescriptor(endpoint_address)
 
     def open_device(self, dev):
         _logger.info("open_device: serial_number=%s", dev.serial_number)
@@ -709,9 +722,11 @@ class _D2xx(usb.backend.IBackend):
 
     def set_configuration(self, dev_handle, config_value):
         _logger.info("set_configuration: config_value=%s", config_value)
+        del dev_handle
 
     def get_configuration(self, dev_handle):
         _logger.info("get_configuration")
+        del dev_handle
         return 1
 
     def claim_interface(self, dev_handle, intf):
@@ -774,42 +789,45 @@ class _D2xx(usb.backend.IBackend):
         self, dev_handle, bmRequestType, bRequest, wValue, wIndex, data, timeout
     ):
         _logger.info(
-            "ctrl_transfer: bmRequestType=0x%02X, bRequest=0x%02X, wValue=0x%04X, wIndex=0x%04X",
+            "ctrl_transfer: bmRequestType=0x%02X, bRequest=0x%02X, wValue=0x%04X, wIndex=0x%04X"
+            " -> %s",
             bmRequestType,
             bRequest,
             wValue,
             wIndex,
+            self._decode_request(bmRequestType, bRequest, wValue),
         )
+        del timeout
 
-        if bmRequestType & 0x7F == 0:
+        if bmRequestType & 0x60 == usb.util.CTRL_TYPE_STANDARD:
             self._ctrl_transfer_standard(
                 dev_handle, bmRequestType, bRequest, wValue, data
             )
-        elif bmRequestType & 0x7F == 0x40:
+        elif bmRequestType & 0x60 == usb.util.CTRL_TYPE_VENDOR:
+            interface_handle = dev_handle
+            if len(dev_handle.dev.interface_handles) > 1 and bRequest < 0x80:
+                interface = (wIndex & 0xFF) - 1
+                interface_handle = dev_handle.dev.interface_handles[interface]
+                if interface_handle.handle is None:
+                    self._open_device_interface(dev_handle.dev, interface)
+
             self._ctrl_transfer_vendor(
-                dev_handle, bmRequestType, bRequest, wValue, wIndex, data
+                interface_handle, bmRequestType, bRequest, wValue, wIndex, data
             )
         else:
-            raise _D2xxError("Not implemented.", LIBUSB_ERROR_NOT_SUPPORTED)
-
-    def is_kernel_driver_active(self, dev_handle, intf):
-        _logger.info("is_kernel_driver_active: intf=%s", intf)
-        return True
-
-    def detach_kernel_driver(self, dev_handle, intf):
-        _logger.info("detach_kernel_driver: intf=%s", intf)
-
-    def attach_kernel_driver(self, dev_handle, intf):
-        _logger.info("attach_kernel_driver: intf=%s", intf)
+            raise _D2xxError("Not implemented.", USB_ERROR_NOT_SUPPORTED)
 
     def _ctrl_transfer_standard(
         self, dev_handle, bmRequestType, bRequest, wValue, data
     ):
-        if bmRequestType & 0x80 == 0x80 and bRequest == 6:  # get_descriptor
+        if (
+            bmRequestType & usb.util.ENDPOINT_IN
+            and bRequest == USB_REQUEST_GET_DESCRIPTOR
+        ):
             desc_index = wValue & 0xFF
             desc_type = (wValue >> 8) & 0xFF
             if desc_type == usb.util.DESC_TYPE_STRING:
-                if desc_index == 0:  # Language IDs
+                if desc_index == USB_DESC_STRING_LANGUAGEIDS:
                     data[0] = 0x04
                     data[1] = 0x03
                     # 0x0409 English(US)
@@ -817,11 +835,11 @@ class _D2xx(usb.backend.IBackend):
                     data[3] = 0x04
                     return 4
 
-                if desc_index == 1:  # iManufacturer
+                if desc_index == USB_DESC_STRING_MANUFACTURER:
                     s = "FTDI"
-                elif desc_index == 2:  # iProduct
+                elif desc_index == USB_DESC_STRING_PRODUCT:
                     s = dev_handle.dev.description
-                elif desc_index == 3:  # iSerialNumber
+                elif desc_index == USB_DESC_STRING_SERIALNUMBER:
                     s = dev_handle.dev.serial_number
                 else:
                     s = None
@@ -833,123 +851,110 @@ class _D2xx(usb.backend.IBackend):
                         data[i + 2] = c
                     return data[0]
 
-        raise _D2xxError("Not implemented.", LIBUSB_ERROR_NOT_SUPPORTED)
+        raise _D2xxError("Not implemented.", USB_ERROR_NOT_SUPPORTED)
 
     # pylint: disable-next=too-many-locals,too-many-branches,too-many-statements,too-many-return-statements
     def _ctrl_transfer_vendor(
         self, dev_handle, bmRequestType, bRequest, wValue, wIndex, data
     ):
         if bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_RESET:
-            interface_handle = self._get_interface_handle(dev_handle, wIndex - 1)
             if wValue == Ftdi.SIO_RESET_SIO:
-                FT_ResetDevice(interface_handle.handle)
+                FT_ResetDevice(dev_handle.handle)
                 return 0
             if wValue == Ftdi.SIO_RESET_PURGE_RX:
-                FT_Purge(interface_handle.handle, FT_PURGE_RX)
+                FT_Purge(dev_handle.handle, FT_PURGE_RX)
                 return 0
             if wValue == Ftdi.SIO_RESET_PURGE_TX:
-                FT_Purge(interface_handle.handle, FT_PURGE_TX)
+                FT_Purge(dev_handle.handle, FT_PURGE_TX)
                 return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_MODEM_CTRL:
-            interface_handle = self._get_interface_handle(dev_handle, wIndex - 1)
             if wValue & 0x0100:
                 if wValue & 0x01:
-                    FT_SetDtr(interface_handle.handle)
+                    FT_SetDtr(dev_handle.handle)
                 else:
-                    FT_ClrDtr(interface_handle.handle)
+                    FT_ClrDtr(dev_handle.handle)
             if wValue & 0x0200:
                 if wValue & 0x02:
-                    FT_SetRts(interface_handle.handle)
+                    FT_SetRts(dev_handle.handle)
                 else:
-                    FT_ClrRts(interface_handle.handle)
+                    FT_ClrRts(dev_handle.handle)
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_FLOW_CTRL:
-            # TODO interface_handle = self._get_interface_handle(dev_handle, wIndex - 1)
-            interface_handle = dev_handle
-            FT_SetFlowControl(interface_handle.handle, wIndex & 0xFF00, 0x11, 0x13)
+            FT_SetFlowControl(dev_handle.handle, wIndex & 0xFF00, 0x11, 0x13)
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_BAUDRATE:
-            # TODO interface_handle = self._get_interface_handle(dev_handle, wIndex - 1)
-            interface_handle = dev_handle
-            # TODO calculate divisor
-            divisor = wValue & 0x3FFF
-            subdivisor = (wValue >> 14) & 3
-            if self._is_r_type(dev_handle.dev.dev_type):
-                subdivisor |= (wIndex & 1) << 2
-            elif self._is_h_type(dev_handle.dev.dev_type):
-                subdivisor |= (wIndex & 0x100) >> 6
-            clock = 12_000_000 if (wIndex >> 9) & 1 else 3_000_000
-            FT_SetBaudRate(interface_handle.handle, 0)
-            # return 0
+            value = wValue
+            if len(dev_handle.dev.interface_handles) > 1:
+                value = (wIndex >> 8) & 0xFF
+            else:
+                value = wIndex & 0xFF
+
+            divisor = value & 0x3FFF
+            frac_div = FTDI_FRAC_DIV[(value >> 14) & 7]
+            hispeed = (value >> 17) & 1
+            clock = 12_000_000 if hispeed else 3_000_000
+            baudrate = (clock * 8) / ((divisor * 8) + frac_div)
+            FT_SetBaudRate(dev_handle.handle, round(baudrate))
+            return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_DATA:
-            interface_handle = self._get_interface_handle(dev_handle, wIndex - 1)
             word_length = wValue & 0xF
             parity = (wValue >> 8) & 0x7
             stop_bits = (wValue >> 11) & 0x3
             line_break = (wValue >> 14) & 0x1
-            FT_SetDataCharacteristics(
-                interface_handle.handle, word_length, stop_bits, parity
-            )
+            FT_SetDataCharacteristics(dev_handle.handle, word_length, stop_bits, parity)
             if line_break:
-                FT_SetBreakOn(interface_handle.handle)
+                FT_SetBreakOn(dev_handle.handle)
             else:
-                FT_SetBreakOff(interface_handle.handle)
+                FT_SetBreakOff(dev_handle.handle)
             return 0
         elif (
             bmRequestType & 0x80 == 0x80 and bRequest == Ftdi.SIO_REQ_POLL_MODEM_STATUS
         ):
-            interface_handle = self._get_interface_handle(dev_handle, wIndex - 1)
-            status = FT_GetModemStatus(interface_handle.handle)
+            status = FT_GetModemStatus(dev_handle.handle)
             data[0] = status & 0xFF
             data[1] = (status >> 8) & 0xFF
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_EVENT_CHAR:
-            interface_handle = self._get_interface_handle(dev_handle, wIndex - 1)
-            interface_handle.event_char = wValue & 0xFF
-            interface_handle.event_char_enabled = (wValue >> 8) & 0xFF
+            dev_handle.event_char = wValue & 0xFF
+            dev_handle.event_char_enabled = (wValue >> 8) & 0xFF
             FT_SetChars(
-                interface_handle.handle,
-                interface_handle.event_char,
-                interface_handle.event_char_enabled,
-                interface_handle.error_char,
-                interface_handle.error_char_enabled,
+                dev_handle.handle,
+                dev_handle.event_char,
+                dev_handle.event_char_enabled,
+                dev_handle.error_char,
+                dev_handle.error_char_enabled,
             )
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_ERROR_CHAR:
-            interface_handle = self._get_interface_handle(dev_handle, wIndex - 1)
-            interface_handle.error_char = wValue & 0xFF
-            interface_handle.error_char_enabled = (wValue >> 8) & 0xFF
+            dev_handle.error_char = wValue & 0xFF
+            dev_handle.error_char_enabled = (wValue >> 8) & 0xFF
             FT_SetChars(
-                interface_handle.handle,
-                interface_handle.event_char,
-                interface_handle.event_char_enabled,
-                interface_handle.error_char,
-                interface_handle.error_char_enabled,
+                dev_handle.handle,
+                dev_handle.event_char,
+                dev_handle.event_char_enabled,
+                dev_handle.error_char,
+                dev_handle.error_char_enabled,
             )
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_SET_LATENCY_TIMER:
-            interface_handle = self._get_interface_handle(dev_handle, wIndex - 1)
-            FT_SetLatencyTimer(interface_handle.handle, wValue)
+            FT_SetLatencyTimer(dev_handle.handle, wValue)
             return 0
         elif (
             bmRequestType & 0x80 == 0x80 and bRequest == Ftdi.SIO_REQ_GET_LATENCY_TIMER
         ):
-            interface_handle = self._get_interface_handle(dev_handle, wIndex - 1)
-            data[0] = FT_GetLatencyTimer(interface_handle.handle)
+            data[0] = FT_GetLatencyTimer(dev_handle.handle)
             return 0
         elif bRequest == Ftdi.SIO_REQ_SET_BITMODE:
-            interface_handle = self._get_interface_handle(dev_handle, wIndex - 1)
             mode = (wValue >> 8) & 0xFF
             mask = wValue & 0xFF
-            FT_SetBitMode(interface_handle.handle, mask, mode)
+            FT_SetBitMode(dev_handle.handle, mask, mode)
             return 0
         elif bmRequestType & 0x80 == 0x80 and bRequest == Ftdi.SIO_REQ_READ_PINS:
-            interface_handle = self._get_interface_handle(dev_handle, wIndex - 1)
-            data[0] = FT_GetBitMode(interface_handle.handle)
+            data[0] = FT_GetBitMode(dev_handle.handle)
             return 0
         elif bmRequestType & 0x80 == 0x80 and bRequest == Ftdi.SIO_REQ_READ_EEPROM:
             if len(data) < 2:
-                raise _D2xxError("Invalid buffer size.", LIBUSB_ERROR_INVALID_PARAM)
+                raise _D2xxError("Invalid buffer size.", USB_ERROR_INVALID_PARAM)
 
             value = FT_ReadEE(dev_handle.handle, wIndex)
             data[0] = value & 0xFF
@@ -962,14 +967,52 @@ class _D2xx(usb.backend.IBackend):
             FT_EraseEE(dev_handle.handle)
             return 0
 
-        raise _D2xxError("Not implemented.", LIBUSB_ERROR_NOT_SUPPORTED)
+        raise _D2xxError("Not implemented.", USB_ERROR_NOT_SUPPORTED)
 
-    def _get_interface_handle(self, dev_handle, interface):
-        interface_handle = dev_handle.dev.interface_handles[interface]
-        if interface_handle.handle is None:
-            self._open_device_interface(dev_handle.dev, interface)
+    # pylint: disable-next=too-many-branches,too-many-return-statements
+    def _decode_request(self, bmRequestType, bRequest, wValue):
+        if bmRequestType & 0x60 == 0:
+            if bRequest == USB_REQUEST_GET_DESCRIPTOR:
+                return "GET_DESCRIPTOR"
+        elif bmRequestType & 0x60 == 0x40:
+            if bRequest == Ftdi.SIO_REQ_RESET:
+                if wValue == Ftdi.SIO_RESET_SIO:
+                    return "SIO_REQ_RESET(SIO_RESET_SIO)"
+                if wValue == Ftdi.SIO_RESET_PURGE_RX:
+                    return "SIO_REQ_RESET(SIO_RESET_PURGE_RX)"
+                if wValue == Ftdi.SIO_RESET_PURGE_TX:
+                    return "SIO_REQ_RESET(SIO_RESET_PURGE_TX)"
+                return "SIO_REQ_RESET"
+            if bRequest == Ftdi.SIO_REQ_SET_MODEM_CTRL:
+                return "SIO_REQ_SET_MODEM_CTRL"
+            if bRequest == Ftdi.SIO_REQ_SET_FLOW_CTRL:
+                return "SIO_REQ_SET_FLOW_CTRL"
+            if bRequest == Ftdi.SIO_REQ_SET_BAUDRATE:
+                return "SIO_REQ_SET_BAUDRATE"
+            if bRequest == Ftdi.SIO_REQ_SET_DATA:
+                return "SIO_REQ_SET_DATA"
+            if bRequest == Ftdi.SIO_REQ_POLL_MODEM_STATUS:
+                return "SIO_REQ_POLL_MODEM_STATUS"
+            if bRequest == Ftdi.SIO_REQ_SET_EVENT_CHAR:
+                return "SIO_REQ_SET_EVENT_CHAR"
+            if bRequest == Ftdi.SIO_REQ_SET_ERROR_CHAR:
+                return "SIO_REQ_SET_ERROR_CHAR"
+            if bRequest == Ftdi.SIO_REQ_SET_LATENCY_TIMER:
+                return "SIO_REQ_SET_LATENCY_TIMER"
+            if bRequest == Ftdi.SIO_REQ_GET_LATENCY_TIMER:
+                return "SIO_REQ_GET_LATENCY_TIMER"
+            if bRequest == Ftdi.SIO_REQ_SET_BITMODE:
+                return "SIO_REQ_SET_BITMODE"
+            if bRequest == Ftdi.SIO_REQ_READ_PINS:
+                return "SIO_REQ_READ_PINS"
+            if bRequest == Ftdi.SIO_REQ_READ_EEPROM:
+                return "SIO_REQ_READ_EEPROM"
+            if bRequest == Ftdi.SIO_REQ_WRITE_EEPROM:
+                return "SIO_REQ_WRITE_EEPROM"
+            if bRequest == Ftdi.SIO_REQ_ERASE_EEPROM:
+                return "SIO_REQ_ERASE_EEPROM"
 
-        return interface_handle
+        return "unknown"
 
     def _open_device_interface(self, dev, interface):
         serial_number = dev.serial_number
@@ -979,7 +1022,7 @@ class _D2xx(usb.backend.IBackend):
         interface_handle = dev.interface_handles[interface]
         if not interface_handle.available:
             raise _D2xxError(
-                "The specified port is already in use.", LIBUSB_ERROR_NO_DEVICE
+                "The specified port is already in use.", USB_ERROR_NO_DEVICE
             )
 
         interface_handle.handle = FT_OpenEx(
@@ -991,29 +1034,6 @@ class _D2xx(usb.backend.IBackend):
         if not interface_handle.handle is None:
             FT_Close(interface_handle.handle)
             interface_handle.handle = None
-
-    def _is_r_type(self, dev_type):
-        return dev_type in (
-            FT_DEVICE_BM,
-            FT_DEVICE_232R,
-            FT_DEVICE_232RN,
-            FT_DEVICE_2232C,
-        )
-
-    def _is_h_type(self, dev_type):
-        return dev_type in (
-            FT_DEVICE_232H,
-            FT_DEVICE_232HP,
-            FT_DEVICE_233HP,
-            FT_DEVICE_2232H,
-            FT_DEVICE_2232HA,
-            FT_DEVICE_2232HP,
-            FT_DEVICE_2233HP,
-            FT_DEVICE_4232H,
-            FT_DEVICE_4232HA,
-            FT_DEVICE_4232HP,
-            FT_DEVICE_4233HP,
-        )
 
 
 def get_backend(find_library=None):
