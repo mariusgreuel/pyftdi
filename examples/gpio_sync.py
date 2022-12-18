@@ -4,6 +4,7 @@ import pyetw
 from pyftdi.gpio import GpioSyncController
 
 logging.basicConfig(level=logging.DEBUG, handlers=(pyetw.LoggerHandler(),))
+logging.getLogger("usb.core").setLevel(logging.DEBUG)
 logging.getLogger("pyftdi.ftdi").setLevel(logging.DEBUG)
 logging.getLogger("pyftdi.d2xx").setLevel(logging.DEBUG)
 

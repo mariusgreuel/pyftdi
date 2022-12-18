@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TraceView>
   <Project>
-    <Session Name="TraceView_017F05D5" Guid="115CCADE-6EF7-11ED-9E6B-50EBF63DF877" Mode="Realtime" Active="true">
+    <Session Name="TraceView_017F05D5" Guid="115CCADE-6EF7-11ED-9E6B-50EBF63DF877" Mode="Realtime" Active="true" FlushTimer="100">
       <Providers>
         <Provider Name="root" Guid="FC83BA60-40A1-52C0-E5E1-7538F57DC11C" Enabled="true"/>
-        <Provider Name="pyetw.test" Guid="433AB0BA-281E-5E11-B698-383612F6BEF6" Enabled="true"/>
         <Provider Name="pyftdi.d2xx" Guid="275EB497-C222-5894-63CC-5C17B3066657" Enabled="true"/>
         <Provider Name="pyftdi.ftdi" Guid="12F5A380-876F-5D7B-99A5-8DAA1D1B53F1" Enabled="true"/>
-        <Provider Name="pyetw.demo" Guid="0EBC66A8-0826-5D05-D72C-FC8BE575DFED" Enabled="true"/>
-        <Provider Name="pyetw.loop" Guid="9A43E5BE-7463-5AC1-5BC2-A1B8547346B9" Enabled="true"/>
+        <Provider Name="usb.core" Guid="63147586-E047-57B8-F100-AF2AE5C5109B" Enabled="true"/>
       </Providers>
     </Session>
     <Filters>
