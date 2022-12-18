@@ -417,7 +417,7 @@ class UsbTools:
                 vps.add((vid, products[pid]))
         devices = cls.find_all(vps)
         if sernum:
-            if not [dev for dev, _ in devices if fnmatchcase(dev.sn, sernum)]:
+            if not [dev for dev, _ in devices if dev.sn and fnmatchcase(dev.sn, sernum)]:
                 raise UsbToolsError("No USB device with S/N '%s'" % sernum)
         for desc, ifcount in devices:
             if vendor and vendor != desc.vid:
