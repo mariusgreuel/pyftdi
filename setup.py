@@ -150,7 +150,7 @@ class CheckStyle(Command):
                               level=INFO)
                 with open(filename, 'rt') as pfp:
                     for lpos, line in enumerate(pfp, start=1):
-                        if len(line) > 80:
+                        if len(line) > 120:
                             print('\n  %d: %s' % (lpos, line.rstrip()))
                             raise RuntimeError("Invalid line width '%s'" %
                                                relpath(filename, topdir))
