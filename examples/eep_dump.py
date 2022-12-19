@@ -7,7 +7,7 @@ logging.getLogger("pyftdi.ftdi").setLevel(logging.DEBUG)
 logging.getLogger("pyftdi.d2xx").setLevel(logging.DEBUG)
 
 eeprom = FtdiEeprom()
-eeprom.open("ftdi://::FT*/1" )
+eeprom.open("ftdi://::FT*/1")
 
 for pos in range(0, len(eeprom.data), 16):
-    print(' '.join(['%02x' % x for x in eeprom.data[pos:pos+16]]))
+    print(" ".join(["%02x" % x for x in eeprom.data[pos : pos + 16]]))

@@ -1,6 +1,6 @@
 # pylint: disable-msg=too-many-lines
 #
-## Copyright (C) 2022 Marius Greuel
+# Copyright (C) 2022 Marius Greuel
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -43,6 +43,7 @@ __all__ = ["get_backend"]
 _logger = logging.getLogger("pyftdi.d2xx")
 
 _lib = None
+
 CreateEventW = None
 WaitForSingleObject = None
 FT_GetLibraryVersion = None
@@ -185,7 +186,7 @@ USB_ERROR_INVALID_PARAM = -2
 USB_ERROR_NO_DEVICE = -4
 USB_ERROR_NOT_SUPPORTED = -12
 
-_libusb_errno = {
+_usb_errno = {
     USB_ERROR_INVALID_PARAM: errno.__dict__.get("EINVAL", None),
     USB_ERROR_NO_DEVICE: errno.__dict__.get("ENODEV", None),
     USB_ERROR_NOT_SUPPORTED: errno.__dict__.get("ENOSYS", None),
@@ -195,19 +196,18 @@ _libusb_errno = {
 def _ft_function(name, *args):
     def errcheck(result, _, args):
         if result != FT_OK:
-            _logger.error("%s%s=%s", function.name, args, result)
+            _logger.error("%s%s=%s", name, args, result)
             raise RuntimeError(
-                f"FTDI API call '{function.name}' failed: {ERRORS.get(result, result)}"
+                f"FTDI API call '{name}' failed: " + ERRORS.get(result, result)
             )
 
-        _logger.debug("%s%s=%s", function.name, args, result)
+        _logger.debug("%s%s=%s", name, args, result)
         return args
 
     argtypes = (arg[1] for arg in args)
     paramflags = tuple((arg[0], arg[2]) for arg in args)
     prototype = CFUNCTYPE(FT_STATUS, *argtypes)
     function = prototype((name, _lib), paramflags)
-    function.name = name
     function.errcheck = errcheck
     return function
 
@@ -221,10 +221,7 @@ def _load_library(_):
         _logger.info("Loading library: %s", path)
         return cdll.LoadLibrary(path)
     except OSError as ex:
-        _logger.error(
-            "Failed to load FTDI D2XX driver. You may need to reinstall the FTDI drivers: %s",
-            ex,
-        )
+        _logger.error("Failed to load FTDI D2XX driver: %s", ex)
         raise FileNotFoundError(f"Failed to load FTDI D2XX driver: {ex}") from ex
 
 
@@ -539,6 +536,7 @@ class _DeviceDescriptor:
         self.port_numbers = None
         self.speed = None
 
+    # pylint: disable-next=too-many-return-statements
     def _get_bcd_device(self, dev_type):
         if dev_type == FT_DEVICE_AM:
             return 0x0200
@@ -548,15 +546,31 @@ class _DeviceDescriptor:
             return 0x0500
         if dev_type == FT_DEVICE_232R:
             return 0x0600
-        if dev_type in (FT_DEVICE_2232H, FT_DEVICE_2232HA, FT_DEVICE_2232HP, FT_DEVICE_2233HP):
+        if dev_type in (
+            FT_DEVICE_2232H,
+            FT_DEVICE_2232HA,
+            FT_DEVICE_2232HP,
+            FT_DEVICE_2233HP,
+        ):
             return 0x0700
-        if dev_type in (FT_DEVICE_4232H, FT_DEVICE_4232HA, FT_DEVICE_4232HP, FT_DEVICE_4233HP):
+        if dev_type in (
+            FT_DEVICE_4232H,
+            FT_DEVICE_4232HA,
+            FT_DEVICE_4232HP,
+            FT_DEVICE_4233HP,
+        ):
             return 0x0800
-        if dev_type in (FT_DEVICE_232H, FT_DEVICE_232HP, FT_DEVICE_233HP, FT_DEVICE_232RN):
+        if dev_type in (
+            FT_DEVICE_232H,
+            FT_DEVICE_232HP,
+            FT_DEVICE_233HP,
+            FT_DEVICE_232RN,
+        ):
             return 0x0900
         if dev_type == FT_DEVICE_X_SERIES:
             return 0x1000
         return 0x0900
+
 
 class _ConfigurationDescriptor:
     def __init__(self, dev):
@@ -613,7 +627,7 @@ class _D2xxError(usb.core.USBError):
     def __init__(self, strerror, error_code=USB_ERROR_NOT_SUPPORTED):
         _logger.error(strerror)
         usb.core.USBError.__init__(
-            self, strerror, error_code, _libusb_errno[error_code]
+            self, strerror, error_code, _usb_errno.get(error_code, None)
         )
 
 

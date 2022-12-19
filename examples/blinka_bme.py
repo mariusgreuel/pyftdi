@@ -23,14 +23,15 @@ for i in range(4, 16):
 i2c = board.I2C()
 bme680 = adafruit_bme680.Adafruit_BME680_I2C(i2c, refresh_rate=1)
 
-logger.setLevel(logging.INFO)
-
 index = 0
 inc = 1
 while True:
     leds[index].value = 1
 
-    print(f"Temperature: {bme680.temperature:0.1f}C, Humidity: {bme680.relative_humidity:0.1f}%")
+    print(
+        f"Temperature: {bme680.temperature:0.1f}C, "
+        f"Humidity: {bme680.relative_humidity:0.1f}%"
+    )
     time.sleep(1)
 
     leds[index].value = 0

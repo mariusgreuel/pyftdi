@@ -16,8 +16,22 @@ import board
 import digitalio
 
 pins = (
-    board.AD0, board.AD1, board.AD2, board.AD3, board.AD4, board.AD5, board.AD6, board.AD7,
-    board.AC0, board.AC1, board.AC2, board.AC3, board.AC4, board.AC5, board.AC6, board.AC7,
+    board.AD0,
+    board.AD1,
+    board.AD2,
+    board.AD3,
+    board.AD4,
+    board.AD5,
+    board.AD6,
+    board.AD7,
+    board.AC0,
+    board.AC1,
+    board.AC2,
+    board.AC3,
+    board.AC4,
+    board.AC5,
+    board.AC6,
+    board.AC7,
 )
 
 leds = [digitalio.DigitalInOut(pin) for pin in pins]

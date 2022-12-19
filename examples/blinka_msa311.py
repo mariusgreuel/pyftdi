@@ -14,7 +14,7 @@ import digitalio
 from adafruit_msa3xx import MSA311
 from adafruit_blinka.microcontroller.ftdi_mpsse.mpsse.pin import Pin
 
-#spi = board.SPI()
+# spi = board.SPI()
 i2c = board.I2C()
 msa = MSA311(i2c)
 
