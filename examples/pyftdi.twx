@@ -9,12 +9,12 @@
         <Provider Name="usb.core" Guid="63147586-E047-57B8-F100-AF2AE5C5109B" Enabled="true"/>
       </Providers>
     </Session>
-    <Filters ActiveFilter="3">
+    <Filters>
       <Filter1>
         <Rules>
           <Rule Enabled="true" Column="LevelName" Relation="Is" Value="DEBUG" Action="Exclude"/>
-            <Rule Enabled="true" Column="Message" Relation="BeginsWith" Value="bulk_write:" Action="Exclude"/>
-            <Rule Enabled="true" Column="Message" Relation="BeginsWith" Value="bulk_read:" Action="Exclude"/>
+          <Rule Enabled="true" Column="Message" Relation="BeginsWith" Value="bulk_write:" Action="Exclude"/>
+          <Rule Enabled="true" Column="Message" Relation="BeginsWith" Value="bulk_read:" Action="Exclude"/>
         </Rules>
       </Filter1>
       <Filter2>
