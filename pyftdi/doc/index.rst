@@ -68,7 +68,7 @@ Supported host OSes
 * macOS
 * Linux
 * FreeBSD
-* Windows, although not officially supported
+* Windows
 
 .. EOT
 

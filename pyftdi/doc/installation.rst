@@ -83,42 +83,11 @@ Homebrew macOS
 Windows
 ```````
 
-Windows is not officially supported (*i.e.* not tested) but some users have
-reported successful installations. Windows requires a specific libusb backend
-installation.
+Windows is supported via the FTDI D2XX plug-and-play drivers.
 
-Zadig
-.....
-
-The probably easiest way to deal with libusb on Windows is to use Zadig_
-
-1. Start up the Zadig utility
-
-2. Select ``Options/List All Devices``, then select the FTDI devices you want
-   to communicate with. Its names depends on your hardware, *i.e.* the name
-   stored in the FTDI EEPROM.
-
-  * With FTDI devices with multiple channels, such as FT2232 (2 channels) and
-    FT4232 (4 channels), you **must** install the driver for the composite
-    parent, **not** for the individual interfaces. If you install the driver
-    for each interface, each interface will be presented as a unique FTDI
-    device and you may have difficulties to select a specific FTDI device port
-    once the installation is completed. To make the composite parents to appear
-    in the device list, uncheck the ``Options/Ignore Hubs or Composite Parents``
-    menu item.
-
-  * Be sure to select the parent device, *i.e.* the device name should not end
-    with *(Interface N)*, where *N* is the channel number.
-
-    * for example *Dual RS232-HS* represents the composite parent, while
-      *Dual RS232-HS (Interface 0)* represents a single channel of the FTDI
-      device. Always select the former.
-
-3. Select ``libusb-win32`` (not ``WinUSB``) in the driver list.
-
-4. Click on ``Replace Driver``
-
-See also `Libusb on Windows`_
+If you have previously replaced the FTDI drivers with a libusb-compatible
+driver, you should uninstall the libusb drivers and use the official
+FTDI plug-and-play drivers instead.
 
 
 .. _install_python:

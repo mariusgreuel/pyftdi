@@ -30,9 +30,7 @@ PyFtdi_ is developed on macOS platforms (64-bit kernel), and is validated on a
 regular basis on Linux hosts.
 
 As it contains no native code, it should work on any PyUSB_ and libusb_
-supported platforms. However, M$ Windows is a seamless source of issues and is
-not officially supported, although users have reported successful installation
-with Windows 7 for example. Your mileage may vary.
+supported platforms. On Windows, PyFtdi_ supports the FTDI D2XX drivers.
 
 
 API breaks

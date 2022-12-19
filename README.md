@@ -1,6 +1,6 @@
 [![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://vshymanskyy.github.io/StandWithUkraine)
 
-# PyFtdi
+# PyFtdiWin
 
 ![Python package](https://github.com/eblot/pyftdi/workflows/Python%20package/badge.svg)
 ![Mock tests](https://github.com/eblot/pyftdi/workflows/Python%20mock%20tests/badge.svg)
@@ -11,9 +11,16 @@
 [![Python Versions](https://img.shields.io/pypi/pyversions/pyftdi.svg)](https://pypi.org/project/pyftdi/)
 [![Downloads](https://img.shields.io/pypi/dm/pyftdi.svg)](https://pypi.org/project/pyftdi/)
 
-## Documentation
+## PyFtdiWin vs. PyFtdi
 
-PyFtdi documentation is available from https://eblot.github.io/pyftdi/
+PyFtdiWin is a fork of PyFtdi. The design objective of the PyFtdiWin fork
+is to support the default Windows plug-and-play drivers provided by FTDI.
+
+PyFtdi only supports libusb-compatible drivers, which requires you to swap
+the official drivers for a libusb-compatible driver using Zadig.
+As Windows serial ports and many other tools expect the default
+FTDI drivers, you will find yourself swapping drivers back-and-forth when
+using PyFtdi with your FTDI devices.
 
 ## Overview
 
@@ -54,7 +61,7 @@ PyFtdi currently supports the following features:
 * macOS
 * Linux
 * FreeBSD
-* Windows, although not officially supported
+* Windows
 
 ## License
 
