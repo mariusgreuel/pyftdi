@@ -7,4 +7,5 @@ pyusb*
 dist/
 build/
 sphinx/
+.vs/
 .vscode/
