@@ -178,15 +178,19 @@ def main():
         keywords=KEYWORDS,
         long_description=read_desc('pyftdi/doc/index.rst'),
         packages=PACKAGES,
-        scripts=['pyftdi/bin/i2cscan.py',
-                 'pyftdi/bin/ftdi_urls.py',
-                 'pyftdi/bin/ftconf.py',
-                 'pyftdi/bin/pyterm.py'],
         package_dir={'': '.'},
         package_data={'pyftdi': ['*.rst', 'doc/*.rst', 'doc/api/*.rst',
                                  'INSTALL'],
                       'pyftdi.serialext': ['*.rst', 'doc/api/uart.rst']},
         classifiers=CLASSIFIERS,
+        entry_points = {
+            'console_scripts': [
+                'ftconf=pyftdi.bin.ftconf:main',
+                'ftdi_urls=pyftdi.bin.ftdi_urls:main',
+                'i2cscan=pyftdi.bin.i2cscan:main',
+                'pyterm=pyftdi.bin.pyterm:main'
+            ],
+        },
         install_requires=INSTALL_REQUIRES,
         test_requires=TEST_REQUIRES,
         python_requires='>=3.7',
