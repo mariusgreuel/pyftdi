@@ -995,7 +995,7 @@ class _D2xx(usb.backend.IBackend):
             data[1] = (value >> 8) & 0xFF
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_WRITE_EEPROM:
-            FT_WriteEE(dev_handle.handle, wIndex)
+            FT_WriteEE(dev_handle.handle, wIndex, wValue)
             return 0
         elif bmRequestType & 0x80 == 0 and bRequest == Ftdi.SIO_REQ_ERASE_EEPROM:
             FT_EraseEE(dev_handle.handle)
